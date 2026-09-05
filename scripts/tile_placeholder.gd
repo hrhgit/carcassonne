@@ -12,8 +12,7 @@ const DESIGN_HALF := 120.0
 const ARC_RADIUS := DESIGN_HALF * 0.45    # 角弧半径
 const ARC_POINTS := 28                     # 弧线采样点数
 const POLY_POINTS := 18                    # 角落多边形采样数
-const ARC_COLOR := Color("#3a7bc8")        # 蓝线（水路）
-const ARC_WIDTH := 3.0
+const ARC_WIDTH := 4.0
 const IR_COLOR := Color("#f5d54a")         # IR 灌溉修饰
 const BORDER_COLOR := Color("#3d362c")     # 文字描边
 const TEXT_COLOR := Color("#1d1a14")
@@ -26,7 +25,7 @@ const CENTER_COLORS := {
 	TileDefinition.CenterKind.RIVER: Color("#5aa9c8"),
 }
 
-# 边基础地形配色
+# 边基础地形配色：绿=地 / 灰=空 / 蓝=水
 const EDGE_COLORS := {
 	TileDefinition.EdgeKind.EMPTY: Color("#bdb6a8"),   # 灰空地
 	TileDefinition.EdgeKind.LAND:  Color("#7eb845"),   # 绿地
@@ -34,6 +33,11 @@ const EDGE_COLORS := {
 	TileDefinition.EdgeKind.RIVER: Color("#5aa9c8"),   # 浅蓝河
 	TileDefinition.EdgeKind.BANK:  Color("#c4a06b"),   # 沙岸
 }
+
+# 弧线（水路）颜色：给边色稍微压暗，作为"边界线"视觉
+func _arc_color_for(kind: int) -> Color:
+	var c: Color = EDGE_COLORS.get(kind, Color("#bdb6a8"))
+	return c.darkened(0.28)
 
 var definition: TileDefinition
 var quarter_turns := 0
@@ -52,7 +56,7 @@ func _draw() -> void:
 	var s := DESIGN_HALF
 	var r := ARC_RADIUS
 	var pts := ARC_POINTS
-	var center_color := CENTER_COLORS.get(definition.center_kind, Color("#bdb6a8"))
+	var center_color: Color = CENTER_COLORS.get(definition.center_kind, Color("#bdb6a8"))
 
 	# 1) 整块底色：先铺中心色（后面 4 个角落会叠在角上）
 	draw_rect(Rect2(-s, -s, s * 2.0, s * 2.0), center_color)
@@ -68,11 +72,12 @@ func _draw() -> void:
 	_draw_corner_wedge(Vector2( s,  s), PI,        PI * 1.5,  EDGE_COLORS.get(edge_kinds[2], Color("#bdb6a8")))
 	_draw_corner_wedge(Vector2(-s,  s), PI * 1.5,  PI * 2.0,  EDGE_COLORS.get(edge_kinds[3], Color("#bdb6a8")))
 
-	# 3) 4 条蓝弧（水路视觉符号）
-	draw_arc(Vector2(-s, -s), r, 0.0,       PI * 0.5, pts, ARC_COLOR, ARC_WIDTH, true)
-	draw_arc(Vector2( s, -s), r, PI * 0.5, PI,       pts, ARC_COLOR, ARC_WIDTH, true)
-	draw_arc(Vector2( s,  s), r, PI,       PI * 1.5, pts, ARC_COLOR, ARC_WIDTH, true)
-	draw_arc(Vector2(-s,  s), r, PI * 1.5, PI * 2.0, pts, ARC_COLOR, ARC_WIDTH, true)
+	# 3) 4 条弧线（按对应边类型着色：蓝=水 / 绿=地 / 灰=空）
+	#    NW = N 边 · NE = E 边 · SE = S 边 · SW = W 边
+	draw_arc(Vector2(-s, -s), r, 0.0,       PI * 0.5, pts, _arc_color_for(edge_kinds[0]), ARC_WIDTH, true)
+	draw_arc(Vector2( s, -s), r, PI * 0.5, PI,       pts, _arc_color_for(edge_kinds[1]), ARC_WIDTH, true)
+	draw_arc(Vector2( s,  s), r, PI,       PI * 1.5, pts, _arc_color_for(edge_kinds[2]), ARC_WIDTH, true)
+	draw_arc(Vector2(-s,  s), r, PI * 1.5, PI * 2.0, pts, _arc_color_for(edge_kinds[3]), ARC_WIDTH, true)
 
 	# 4) IR 灌溉修饰：在对应边外侧点一个小亮黄点（指示有 IR）
 	for world_edge in range(4):

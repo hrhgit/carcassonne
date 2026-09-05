@@ -1368,11 +1368,24 @@ func _run_plants_smoke() -> bool:
 
 func _capture_game_preview() -> void:
 	for move_index in range(7):
+		# 抽牌：给当前玩家发一张，进入 PLACE
+		if int(board_state.phase) == BoardState.Phase.DEAL:
+			if deck_index >= deck.size():
+				break
+			var deal: Dictionary = board_state.deal_tile(deck[deck_index])
+			if not bool(deal["valid"]):
+				break
+			deck_index += 1
+			current_rotation = 0
+		if int(board_state.phase) != BoardState.Phase.PLACE or board_state.tile_to_place == null:
+			break
 		var move = _find_first_visible_legal_move()
 		if move.is_empty():
 			break
 		current_rotation = int(move["rotation"])
 		_try_place_current_tile(move["cell"])
+		# 放完自动进入动作窗口；这里直接结算并切人到下一玩家，加速布局
+		board_state.finish_action_window(PLANT_ENGINE_SCRIPT, deck_index >= deck.size())
 	await get_tree().create_timer(0.35).timeout
 	var capture_directory = ProjectSettings.globalize_path("res://artifacts")
 	DirAccess.make_dir_recursive_absolute(capture_directory)
