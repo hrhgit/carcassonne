@@ -41,7 +41,7 @@ func can_place(definition: TileDefinition, cell: Vector2i, quarter_turns: int) -
 			opposite_edge(edge),
 			int(neighbour["rotation"]),
 		)
-		if own_marker != neighbour_marker:
+		if not _edges_compatible(own_marker, neighbour_marker):
 			return _verdict(false, "%s为%s，但相接边为%s。" % [
 				edge_label(edge),
 				TileDefinition.edge_kind_label(own_marker),
@@ -52,6 +52,21 @@ func can_place(definition: TileDefinition, cell: Vector2i, quarter_turns: int) -
 		return _verdict(false, "新地块必须至少与现有地图的一条边相接。")
 
 	return _verdict(true, "所有相接的边口都匹配。")
+
+
+# 规则书 §3.2 边拼接兼容判定
+# - 同基础地形对接合法（LAND↔LAND / WATER↔WATER / EMPTY↔EMPTY / RIVER↔RIVER / BANK↔BANK）
+# - BANK ↔ EMPTY 合法
+# - BANK ↔ WATER 合法（永久改写为水渠，本函数只判定可行性）
+# - 其余组合非法
+static func _edges_compatible(own: int, neighbour: int) -> bool:
+	if own == neighbour:
+		return true
+	if own == TileDefinition.EdgeKind.BANK and (neighbour == TileDefinition.EdgeKind.EMPTY or neighbour == TileDefinition.EdgeKind.WATER):
+		return true
+	if neighbour == TileDefinition.EdgeKind.BANK and (own == TileDefinition.EdgeKind.EMPTY or own == TileDefinition.EdgeKind.WATER):
+		return true
+	return false
 
 
 func place(definition: TileDefinition, cell: Vector2i, quarter_turns: int, player_id: int) -> Dictionary:

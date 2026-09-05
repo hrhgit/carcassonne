@@ -1,0 +1,25 @@
+﻿id,display_name,card_type,count,N,E,S,W,N_ir,E_ir,S_ir,W_ir,center,is_river_tile,prefab_scene,prefab_rotation,visual_seed,initial_growth,notes
+starter_alluvial_cross,冲积十字,starter,1,LAND,LAND,LAND,LAND,0,0,0,0,LAND,0,res://scenes/tiles/alluvial_cross.tscn,0,4001,1,开局中央起手 tile
+brook_nook_a,溪畔小地,tile,3,LAND,EMPTY,WATER,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/brook_nook.tscn,0,1103,0,
+brook_nook_b,溪畔小地,tile,3,LAND,EMPTY,WATER,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/brook_nook.tscn,0,6131,0,
+brook_nook_c,溪畔小地,tile,3,WATER,EMPTY,LAND,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/brook_nook.tscn,2,11617,0,
+brook_nook_d,溪畔小地,tile,3,LAND,EMPTY,WATER,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/brook_nook.tscn,0,17189,0,
+bank_pair_a,双岸地块,tile,2,LAND,WATER,LAND,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/opposite_banks.tscn,0,2221,0,
+bank_pair_b,双岸地块,tile,2,WATER,LAND,EMPTY,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/opposite_banks.tscn,3,7247,0,
+bank_pair_c,双岸地块,tile,2,LAND,LAND,WATER,EMPTY,0,0,0,0,EMPTY,0,res://scenes/tiles/corner_bank.tscn,0,12733,0,
+split_canal_a,分流水渠,tile,2,WATER,LAND,WATER,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/river_cross.tscn,1,3371,0,
+split_canal_b,分流水渠,tile,2,WATER,LAND,WATER,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/river_cross.tscn,1,14800,0,
+three_side_a,三边水渠,tile,2,LAND,LAND,WATER,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/three_side_canal.tscn,0,4493,0,
+three_side_b,三边水渠,tile,2,LAND,WATER,LAND,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/three_side_canal.tscn,3,8363,0,
+three_side_c,三边水渠,tile,2,WATER,LAND,LAND,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/three_side_canal.tscn,2,13849,0,
+river_field_a,河畔田野,tile,2,LAND,WATER,LAND,WATER,0,0,0,0,EMPTY,0,res://scenes/tiles/river_cross.tscn,0,9479,0,
+river_field_b,河畔田野,tile,2,LAND,WATER,LAND,WATER,0,0,0,0,EMPTY,0,res://scenes/tiles/river_cross.tscn,0,14963,0,
+heartland_a,沃土中心,tile,3,LAND,LAND,LAND,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/alluvial_cross.tscn,0,5519,0,
+heartland_b,沃土中心,tile,3,LAND,LAND,LAND,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/alluvial_cross.tscn,0,10501,0,
+heartland_c,沃土中心,tile,3,LAND,LAND,LAND,LAND,0,0,0,0,EMPTY,0,res://scenes/tiles/alluvial_cross.tscn,0,16073,0,
+ir_land_001,含水土地,tile,2,LAND,LAND,EMPTY,EMPTY,1,1,0,0,EMPTY,0,,0,20001,0,验证 LAND+IR 边，无美术
+ir_water_001,水口含水,tile,2,WATER,LAND,WATER,EMPTY,1,0,1,0,EMPTY,0,,0,20002,0,验证 WATER+IR 边，无美术
+bank_tile_001,双河岸,tile,2,BANK,LAND,EMPTY,BANK,0,0,0,0,EMPTY,0,,0,20003,0,验证 BANK 边，无美术
+bank_water_001,水口接河岸,tile,2,BANK,WATER,LAND,EMPTY,0,0,0,0,EMPTY,0,,0,20004,0,验证 BANK↔WATER 改写水渠，无美术
+river_tile_001,河流地块,tile,2,RIVER,RIVER,BANK,BANK,0,0,0,0,RIVER,1,,0,20005,0,验证河流地块 + center=RIVER，无美术
+lake_center_001,湖心地块,tile,2,LAND,LAND,LAND,LAND,0,0,0,0,LAKE,0,,0,20006,0,验证 center=LAKE + LAND+IR，无美术
