@@ -1,0 +1,97 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork.gd" id="1_artwork"]
+
+[node name="CornerBank" type="Node2D"]
+script = ExtResource("1_artwork")
+edge_markers = PackedInt32Array(1, 1, 2, 0)
+
+[node name="CornerSoilFill" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-106, -106, 106, -106, 106, 106, 84, 106, 72, 92, 60, 76, 48, 60, 36, 46, 22, 32, 8, 20, -8, 8, -26, -4, -46, -16, -66, -28, -86, -36, -106, -42, -106, -106)
+color = Color(0.690196, 0.486275, 0.290196, 1)
+
+[node name="CornerSoilHighlight" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-100, -102, 100, -102, 100, 100, 82, 100, 70, 92, 58, 76, 46, 60, 34, 46, 20, 32, 6, 22, -10, 10, -28, -2, -48, -14, -68, -26, -88, -34, -100, -40, -100, -102)
+color = Color(0.84, 0.62, 0.42, 0.5)
+
+[node name="CornerSoilBorder" type="Line2D" parent="."]
+points = PackedVector2Array(-106, -106, 106, -106, 106, 106, 84, 106, 72, 92, 60, 76, 48, 60, 36, 46, 22, 32, 8, 20, -8, 8, -26, -4, -46, -16, -66, -28, -86, -36, -106, -42, -106, -106)
+width = 4.0
+default_color = Color(0.290196, 0.164706, 0.0784314, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="CornerTuftA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-5, 1, 5, 1, 0, -7)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="CornerTuftB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 1, 4, 1, 0, -6)
+color = Color(0.34, 0.56, 0.26, 0.8)
+
+[node name="CornerTuftC" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 1, 4, 1, 0, -6)
+color = Color(0.34, 0.56, 0.26, 0.8)
+
+[node name="CornerTuftD" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-5, 1, 5, 1, 0, -7)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="CornerTuftE" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 1, 4, 1, 0, -6)
+color = Color(0.34, 0.56, 0.26, 0.8)
+
+[node name="CornerPebbleA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(60, -86, 66, -86, 66, -82, 60, -82)
+color = Color(0.86, 0.80, 0.65, 0.7)
+
+[node name="CornerPebbleB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-78, 56, -72, 56, -72, 60, -78, 60)
+color = Color(0.86, 0.80, 0.65, 0.7)
+
+[node name="WaterBank" type="Line2D" parent="."]
+points = PackedVector2Array(0, 106, 3, 85, 7, 60, 10, 35, 8, 10, 4, -10)
+width = 22.0
+default_color = Color(0.286275, 0.494118, 0.435294, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterBody" type="Line2D" parent="."]
+points = PackedVector2Array(0, 106, 2, 85, 5, 60, 7, 35, 6, 10, 3, -8)
+width = 14.0
+default_color = Color(0.223529, 0.623529, 0.768627, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterHighlight" type="Line2D" parent="."]
+points = PackedVector2Array(0, 102, 1, 85, 3, 60, 4, 35, 4, 10, 2, -6)
+width = 4.0
+default_color = Color(0.509804, 0.858824, 0.886275, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterRippleA" type="Line2D" parent="."]
+points = PackedVector2Array(-5, 75, 5, 75)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.65)
+antialiased = true
+
+[node name="WaterRippleB" type="Line2D" parent="."]
+points = PackedVector2Array(-3, 48, 7, 48)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.55)
+antialiased = true
+
+[node name="WaterRippleC" type="Line2D" parent="."]
+points = PackedVector2Array(0, 22, 6, 22)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.55)
+antialiased = true
