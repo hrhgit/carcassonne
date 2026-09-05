@@ -1,0 +1,169 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="MatStem"]
+albedo_color = Color(0.17, 0.34, 0.13, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="MatLeaf"]
+albedo_color = Color(0.29, 0.53, 0.19, 1)
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="MatPetal"]
+albedo_color = Color(0.96, 0.85, 0.68, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="MatCore"]
+albedo_color = Color(0.84, 0.57, 0.13, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="MatDryStem"]
+albedo_color = Color(0.33, 0.22, 0.11, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="MatDryFlower"]
+albedo_color = Color(0.54, 0.38, 0.18, 1)
+roughness = 0.98
+
+[sub_resource type="StandardMaterial3D" id="MatOwnerMarker"]
+resource_local_to_scene = true
+albedo_color = Color(0.18, 0.52, 0.86, 1)
+roughness = 0.62
+
+[sub_resource type="CylinderMesh" id="MeshStem"]
+material = SubResource("MatStem")
+top_radius = 0.021
+bottom_radius = 0.035
+height = 0.76
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshLeaf"]
+material = SubResource("MatLeaf")
+radius = 0.10
+height = 0.28
+radial_segments = 6
+rings = 3
+
+[sub_resource type="SphereMesh" id="MeshPetal"]
+material = SubResource("MatPetal")
+radius = 0.13
+height = 0.075
+radial_segments = 6
+rings = 3
+
+[sub_resource type="SphereMesh" id="MeshCore"]
+material = SubResource("MatCore")
+radius = 0.075
+height = 0.11
+radial_segments = 7
+rings = 3
+
+[sub_resource type="CylinderMesh" id="MeshDryStem"]
+material = SubResource("MatDryStem")
+top_radius = 0.017
+bottom_radius = 0.030
+height = 0.58
+radial_segments = 5
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshDryFlower"]
+material = SubResource("MatDryFlower")
+radius = 0.12
+height = 0.14
+radial_segments = 5
+rings = 2
+
+[sub_resource type="CylinderMesh" id="MeshOwnerMarker"]
+material = SubResource("MatOwnerMarker")
+top_radius = 0.10
+bottom_radius = 0.10
+height = 0.04
+radial_segments = 6
+rings = 1
+
+[node name="SoilFlower" type="Node3D"]
+script = ExtResource("1_script")
+species_id = &"soil_flower"
+
+[node name="GrowingParts" type="Node3D" parent="."]
+
+[node name="Stem" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0, 0.38, 0)
+mesh = SubResource("MeshStem")
+
+[node name="LeafWest" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(-0.13, 0.28, 0)
+rotation_degrees = Vector3(0, 0, 57)
+scale = Vector3(0.62, 0.90, 0.45)
+mesh = SubResource("MeshLeaf")
+
+[node name="LeafEast" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0.13, 0.38, 0.015)
+rotation_degrees = Vector3(0, 0, -58)
+scale = Vector3(0.60, 0.86, 0.45)
+mesh = SubResource("MeshLeaf")
+
+[node name="LeafFront" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0, 0.20, 0.13)
+rotation_degrees = Vector3(63, 0, 0)
+scale = Vector3(0.50, 0.75, 0.46)
+mesh = SubResource("MeshLeaf")
+
+[node name="PetalNorth" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0, 0.79, -0.105)
+scale = Vector3(0.78, 0.30, 0.54)
+mesh = SubResource("MeshPetal")
+
+[node name="PetalSouth" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0, 0.79, 0.105)
+scale = Vector3(0.78, 0.30, 0.54)
+mesh = SubResource("MeshPetal")
+
+[node name="PetalWest" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(-0.105, 0.79, 0)
+rotation_degrees = Vector3(0, 90, 0)
+scale = Vector3(0.78, 0.30, 0.54)
+mesh = SubResource("MeshPetal")
+
+[node name="PetalEast" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0.105, 0.79, 0)
+rotation_degrees = Vector3(0, 90, 0)
+scale = Vector3(0.78, 0.30, 0.54)
+mesh = SubResource("MeshPetal")
+
+[node name="PetalDiagonal" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0.07, 0.79, 0.07)
+rotation_degrees = Vector3(0, 45, 0)
+scale = Vector3(0.70, 0.28, 0.52)
+mesh = SubResource("MeshPetal")
+
+[node name="Core" type="MeshInstance3D" parent="GrowingParts"]
+position = Vector3(0, 0.83, 0)
+mesh = SubResource("MeshCore")
+
+[node name="WitheredParts" type="Node3D" parent="."]
+visible = false
+
+[node name="DryStem" type="MeshInstance3D" parent="WitheredParts"]
+position = Vector3(-0.095, 0.25, 0)
+rotation_degrees = Vector3(0, 0, 37)
+mesh = SubResource("MeshDryStem")
+
+[node name="DryLeafWest" type="MeshInstance3D" parent="WitheredParts"]
+position = Vector3(-0.16, 0.16, 0)
+rotation_degrees = Vector3(0, 0, 64)
+scale = Vector3(0.45, 0.60, 0.35)
+mesh = SubResource("MeshDryFlower")
+
+[node name="DryHead" type="MeshInstance3D" parent="WitheredParts"]
+position = Vector3(-0.28, 0.48, 0)
+rotation_degrees = Vector3(0, 0, 63)
+scale = Vector3(0.90, 0.55, 0.90)
+mesh = SubResource("MeshDryFlower")
+
+[node name="OwnerMarker" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.32, 0)
+mesh = SubResource("MeshOwnerMarker")
+material_override = SubResource("MatOwnerMarker")

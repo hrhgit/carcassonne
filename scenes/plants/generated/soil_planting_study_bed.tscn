@@ -1,0 +1,331 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/soil_planting_bed_3d.gd" id="1_kyvv7"]
+[ext_resource type="Resource" path="res://art/generated/soil_planting_study_layout.tres" id="2_7gem5"]
+[ext_resource type="PackedScene" path="res://scenes/plants/soil_sapling.tscn" id="3_o2jun"]
+[ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="4_evu38"]
+[ext_resource type="PackedScene" path="res://scenes/plants/soil_flower.tscn" id="5_aavu1"]
+[ext_resource type="PackedScene" path="res://scenes/plants/soil_herb.tscn" id="6_1goh0"]
+
+[node name="SoilPlantingStudyBed" type="Node3D" unique_id=1697195626]
+script = ExtResource("1_kyvv7")
+layout = ExtResource("2_7gem5")
+
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=147960576]
+
+[node name="soil_sapling_01" type="Node3D" parent="GrowingPlants" unique_id=2041252496 instance=ExtResource("3_o2jun")]
+transform = Transform3D(-0.5639773, 0, -0.7265688, 0, 0.91976774, 0, 0.7265688, 0, -0.5639773, -0.09063077, 0.14, 0.26690888)
+script = ExtResource("4_evu38")
+species_id = &"soil_sapling"
+metadata/reveal_threshold = 0.19710524
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_sapling_02" type="Node3D" parent="GrowingPlants" unique_id=1754604229 instance=ExtResource("3_o2jun")]
+transform = Transform3D(-0.75493586, 0, -0.5764626, 0, 0.9498617, 0, 0.5764626, 0, -0.75493586, 1.2645223, 0.14, -1.12912)
+script = ExtResource("4_evu38")
+species_id = &"soil_sapling"
+metadata/reveal_threshold = 0.7245194464921951
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_03" type="Node3D" parent="GrowingPlants" unique_id=999605628 instance=ExtResource("5_aavu1")]
+transform = Transform3D(1.0123637, 0, 0.29299954, 0, 1.0539112, 0, -0.29299954, 0, 1.0123637, -1.4286468, 0.14, -1.3261282)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.05975449510983059
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_04" type="Node3D" parent="GrowingPlants" unique_id=1711409040 instance=ExtResource("5_aavu1")]
+transform = Transform3D(0.59437984, 0, -0.74611545, 0, 0.95392644, 0, 0.74611545, 0, 0.59437984, 1.6145504, 0.14, 1.3725672)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.1960124628884452
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_05" type="Node3D" parent="GrowingPlants" unique_id=1404616763 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.798109, 0, -0.6554717, 0, 1.0327735, 0, 0.6554717, 0, -0.798109, -1.7178667, 0.14, 1.3407676)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.3498250033174242
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_06" type="Node3D" parent="GrowingPlants" unique_id=1996157786 instance=ExtResource("5_aavu1")]
+transform = Transform3D(0.91909105, 0, 0.09610847, 0, 0.92410237, 0, -0.09610847, 0, 0.91909105, -1.7196279, 0.14, -0.26574683)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.4499477041619165
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_07" type="Node3D" parent="GrowingPlants" unique_id=1885433338 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.029870305, 0, -0.922929, 0, 0.92341226, 0, 0.922929, 0, -0.029870305, 0.7454181, 0.14, 1.8067424)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.6809454219681876
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_08" type="Node3D" parent="GrowingPlants" unique_id=53811150 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.76640165, 0, 0.5817384, 0, 0.9621804, 0, -0.5817384, 0, -0.76640165, -0.55486757, 0.14, -1.2769219)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.7864618982587542
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_09" type="Node3D" parent="GrowingPlants" unique_id=1117957925 instance=ExtResource("5_aavu1")]
+transform = Transform3D(1.0346608, 0, 0.36921462, 0, 1.0985638, 0, -0.36921462, 0, 1.0346608, 1.1085227, 0.14, 0.73564863)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+metadata/reveal_threshold = 0.905515594141824
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_10" type="Node3D" parent="GrowingPlants" unique_id=1527679675 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.6042594, 0, -0.6644869, 0, 0.8981494, 0, 0.6644869, 0, -0.6042594, -0.56225014, 0.14, 1.5801556)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.02
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_11" type="Node3D" parent="GrowingPlants" unique_id=686823549 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.019425133, 0, -0.91248107, 0, 0.9126878, 0, 0.91248107, 0, -0.019425133, 1.7754185, 0.14, 0.27762842)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.11979213853677112
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_12" type="Node3D" parent="GrowingPlants" unique_id=914817013 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.8312089, 0, -0.10035627, 0, 0.8372452, 0, 0.10035627, 0, -0.8312089, 0.1554625, 0.14, -1.6680193)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.1804907533029715
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_13" type="Node3D" parent="GrowingPlants" unique_id=730608730 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.53522277, 0, 1.0046934, 0, 1.1383638, 0, -1.0046934, 0, -0.53522277, -1.0008707, 0.14, 1.076411)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.29998937745889026
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_14" type="Node3D" parent="GrowingPlants" unique_id=1211425933 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.7006405, 0, 0.42712647, 0, 0.8205694, 0, -0.42712647, 0, 0.7006405, -1.2081692, 0.14, -0.7318891)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.3811693588892619
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_15" type="Node3D" parent="GrowingPlants" unique_id=649508929 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.87599266, 0, 0.17601596, 0, 0.8935014, 0, -0.17601596, 0, -0.87599266, 0.020938873, 0.14, 1.6472011)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.4973529626925786
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_16" type="Node3D" parent="GrowingPlants" unique_id=1389239735 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.71065795, 0, -0.42514536, 0, 0.82812035, 0, 0.42514536, 0, 0.71065795, 0.21010542, 0.14, -0.7473905)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.5751181393861771
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_17" type="Node3D" parent="GrowingPlants" unique_id=1179456171 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.9642224, 0, -0.1828218, 0, 0.9814013, 0, 0.1828218, 0, 0.9642224, -1.7304409, 0.14, 0.4922111)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.6283370951811472
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_18" type="Node3D" parent="GrowingPlants" unique_id=1520472347 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.79700166, 0, -0.5839945, 0, 0.98805934, 0, 0.5839945, 0, -0.79700166, -1.4039145, 0.14, 1.9450438)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.7051492358247439
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_19" type="Node3D" parent="GrowingPlants" unique_id=445744390 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.6020366, 0, 0.7327022, 0, 0.9483146, 0, -0.7327022, 0, 0.6020366, -0.99806225, 0.14, -1.937265)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.7533520724003514
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_20" type="Node3D" parent="GrowingPlants" unique_id=1815562398 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.9578628, 0, 0.24705723, 0, 0.989211, 0, -0.24705723, 0, -0.9578628, 1.594398, 0.14, 1.9575412)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.8545707439382871
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_21" type="Node3D" parent="GrowingPlants" unique_id=351247487 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.68749535, 0, -0.696885, 0, 0.97892725, 0, 0.696885, 0, -0.68749535, -1.2603437, 0.14, 0.18898535)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+metadata/reveal_threshold = 0.98
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=1040826104]
+
+[node name="soil_sapling_01" type="Node3D" parent="WitheredPlants" unique_id=2049897758 instance=ExtResource("3_o2jun")]
+transform = Transform3D(-0.5639773, 0, -0.7265688, 0, 0.91976774, 0, 0.7265688, 0, -0.5639773, -0.09063077, 0.14, 0.26690888)
+script = ExtResource("4_evu38")
+species_id = &"soil_sapling"
+growth_state = 1
+metadata/reveal_threshold = 0.19710524
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_sapling_02" type="Node3D" parent="WitheredPlants" unique_id=1965277150 instance=ExtResource("3_o2jun")]
+transform = Transform3D(-0.75493586, 0, -0.5764626, 0, 0.9498617, 0, 0.5764626, 0, -0.75493586, 1.2645223, 0.14, -1.12912)
+script = ExtResource("4_evu38")
+species_id = &"soil_sapling"
+growth_state = 1
+metadata/reveal_threshold = 0.7245194464921951
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_03" type="Node3D" parent="WitheredPlants" unique_id=433627137 instance=ExtResource("5_aavu1")]
+transform = Transform3D(1.0123637, 0, 0.29299954, 0, 1.0539112, 0, -0.29299954, 0, 1.0123637, -1.4286468, 0.14, -1.3261282)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.05975449510983059
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_04" type="Node3D" parent="WitheredPlants" unique_id=2044291080 instance=ExtResource("5_aavu1")]
+transform = Transform3D(0.59437984, 0, -0.74611545, 0, 0.95392644, 0, 0.74611545, 0, 0.59437984, 1.6145504, 0.14, 1.3725672)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.1960124628884452
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_05" type="Node3D" parent="WitheredPlants" unique_id=896190236 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.798109, 0, -0.6554717, 0, 1.0327735, 0, 0.6554717, 0, -0.798109, -1.7178667, 0.14, 1.3407676)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.3498250033174242
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_06" type="Node3D" parent="WitheredPlants" unique_id=624163631 instance=ExtResource("5_aavu1")]
+transform = Transform3D(0.91909105, 0, 0.09610847, 0, 0.92410237, 0, -0.09610847, 0, 0.91909105, -1.7196279, 0.14, -0.26574683)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.4499477041619165
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_07" type="Node3D" parent="WitheredPlants" unique_id=1836121430 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.029870305, 0, -0.922929, 0, 0.92341226, 0, 0.922929, 0, -0.029870305, 0.7454181, 0.14, 1.8067424)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.6809454219681876
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_08" type="Node3D" parent="WitheredPlants" unique_id=1375740471 instance=ExtResource("5_aavu1")]
+transform = Transform3D(-0.76640165, 0, 0.5817384, 0, 0.9621804, 0, -0.5817384, 0, -0.76640165, -0.55486757, 0.14, -1.2769219)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.7864618982587542
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_flower_09" type="Node3D" parent="WitheredPlants" unique_id=650193050 instance=ExtResource("5_aavu1")]
+transform = Transform3D(1.0346608, 0, 0.36921462, 0, 1.0985638, 0, -0.36921462, 0, 1.0346608, 1.1085227, 0.14, 0.73564863)
+script = ExtResource("4_evu38")
+species_id = &"soil_flower"
+growth_state = 1
+metadata/reveal_threshold = 0.905515594141824
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_10" type="Node3D" parent="WitheredPlants" unique_id=961098868 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.6042594, 0, -0.6644869, 0, 0.8981494, 0, 0.6644869, 0, -0.6042594, -0.56225014, 0.14, 1.5801556)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.02
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_11" type="Node3D" parent="WitheredPlants" unique_id=664009433 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.019425133, 0, -0.91248107, 0, 0.9126878, 0, 0.91248107, 0, -0.019425133, 1.7754185, 0.14, 0.27762842)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.11979213853677112
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_12" type="Node3D" parent="WitheredPlants" unique_id=1363867855 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.8312089, 0, -0.10035627, 0, 0.8372452, 0, 0.10035627, 0, -0.8312089, 0.1554625, 0.14, -1.6680193)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.1804907533029715
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_13" type="Node3D" parent="WitheredPlants" unique_id=673930113 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.53522277, 0, 1.0046934, 0, 1.1383638, 0, -1.0046934, 0, -0.53522277, -1.0008707, 0.14, 1.076411)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.29998937745889026
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_14" type="Node3D" parent="WitheredPlants" unique_id=500629022 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.7006405, 0, 0.42712647, 0, 0.8205694, 0, -0.42712647, 0, 0.7006405, -1.2081692, 0.14, -0.7318891)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.3811693588892619
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_15" type="Node3D" parent="WitheredPlants" unique_id=1428789615 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.87599266, 0, 0.17601596, 0, 0.8935014, 0, -0.17601596, 0, -0.87599266, 0.020938873, 0.14, 1.6472011)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.4973529626925786
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_16" type="Node3D" parent="WitheredPlants" unique_id=1826197460 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.71065795, 0, -0.42514536, 0, 0.82812035, 0, 0.42514536, 0, 0.71065795, 0.21010542, 0.14, -0.7473905)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.5751181393861771
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_17" type="Node3D" parent="WitheredPlants" unique_id=1602105143 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.9642224, 0, -0.1828218, 0, 0.9814013, 0, 0.1828218, 0, 0.9642224, -1.7304409, 0.14, 0.4922111)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.6283370951811472
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_18" type="Node3D" parent="WitheredPlants" unique_id=433359804 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.79700166, 0, -0.5839945, 0, 0.98805934, 0, 0.5839945, 0, -0.79700166, -1.4039145, 0.14, 1.9450438)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.7051492358247439
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_19" type="Node3D" parent="WitheredPlants" unique_id=1463620503 instance=ExtResource("6_1goh0")]
+transform = Transform3D(0.6020366, 0, 0.7327022, 0, 0.9483146, 0, -0.7327022, 0, 0.6020366, -0.99806225, 0.14, -1.937265)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.7533520724003514
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_20" type="Node3D" parent="WitheredPlants" unique_id=1939357378 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.9578628, 0, 0.24705723, 0, 0.989211, 0, -0.24705723, 0, -0.9578628, 1.594398, 0.14, 1.9575412)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.8545707439382871
+metadata/planting_mask_id = "soil_planting_study"
+
+[node name="soil_herb_21" type="Node3D" parent="WitheredPlants" unique_id=1407771614 instance=ExtResource("6_1goh0")]
+transform = Transform3D(-0.68749535, 0, -0.696885, 0, 0.97892725, 0, 0.696885, 0, -0.68749535, -1.2603437, 0.14, 0.18898535)
+script = ExtResource("4_evu38")
+species_id = &"soil_herb"
+growth_state = 1
+metadata/reveal_threshold = 0.98
+metadata/planting_mask_id = "soil_planting_study"

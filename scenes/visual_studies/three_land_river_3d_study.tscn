@@ -1,0 +1,258 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/three_land_river_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/three_land_river_3d.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentStudy"]
+background_mode = 1
+background_color = Color(0.88, 0.91, 0.86, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.78, 0.70, 1)
+ambient_light_energy = 0.56
+ssao_enabled = true
+ssao_radius = 0.50
+ssao_intensity = 0.72
+
+[sub_resource type="StandardMaterial3D" id="MatTable"]
+albedo_color = Color(0.84, 0.81, 0.74, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="MeshTable"]
+material = SubResource("MatTable")
+size = Vector3(12, 0.32, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleInfoPanel"]
+bg_color = Color(0.96, 0.98, 0.96, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.78, 0.68, 0.6)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBadge"]
+bg_color = Color(0.90, 0.95, 0.90, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.50, 0.75, 0.58, 0.75)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleFoamDebugPanel"]
+bg_color = Color(0.035, 0.105, 0.12, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.78, 0.75, 0.72)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0, 0, 0.22)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleFoamDebugButton"]
+bg_color = Color(0.88, 0.96, 0.93, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.36, 0.70, 0.60, 0.82)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="ThreeLandRiver3DStudy" type="Node3D"]
+script = ExtResource("1_study")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStudy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-38, -36, 0)
+light_color = Color(1, 0.96, 0.90, 1)
+light_energy = 1.26
+shadow_enabled = true
+directional_shadow_max_distance = 22.0
+shadow_opacity = 0.86
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.5, 0)
+mesh = SubResource("MeshTable")
+
+[node name="ThreeLandRiver3D" parent="." instance=ExtResource("2_tile")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+projection = 1
+size = 6.7
+near = 0.1
+far = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoPanel" type="Panel" parent="UI"]
+offset_left = 34.0
+offset_top = 30.0
+offset_right = 520.0
+offset_bottom = 148.0
+theme_override_styles/panel = SubResource("StyleInfoPanel")
+
+[node name="Title" type="Label" parent="UI/InfoPanel"]
+offset_left = 22.0
+offset_top = 17.0
+offset_right = 458.0
+offset_bottom = 49.0
+theme_override_colors/font_color = Color(0.12, 0.32, 0.22, 1)
+theme_override_font_sizes/font_size = 24
+text = "THREE LAND RIVER · FRESH 3D"
+
+[node name="Subtitle" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 58.0
+offset_right = 458.0
+offset_bottom = 83.0
+theme_override_colors/font_color = Color(0.24, 0.48, 0.35, 1)
+theme_override_font_sizes/font_size = 14
+text = "三边沃野 · 单口引水 · 晶莹碧水溪流"
+
+[node name="MeshNote" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 87.0
+offset_right = 458.0
+offset_bottom = 108.0
+theme_override_colors/font_color = Color(0.38, 0.58, 0.45, 1)
+theme_override_font_sizes/font_size = 12
+text = "微缩引水小闸 · 三向灌溉支流 · 日光桌面微缩"
+
+[node name="AngleBadge" type="Panel" parent="UI"]
+offset_left = 930.0
+offset_top = 32.0
+offset_right = 1246.0
+offset_bottom = 82.0
+theme_override_styles/panel = SubResource("StyleBadge")
+
+[node name="AngleLabel" type="Label" parent="UI"]
+offset_left = 954.0
+offset_top = 45.0
+offset_right = 1225.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.14, 0.40, 0.25, 1)
+theme_override_font_sizes/font_size = 16
+text = "55° 斜俯视 · 正交投影"
+horizontal_alignment = 1
+
+[node name="FoamDebugToggle" type="Button" parent="UI"]
+offset_left = 726.0
+offset_top = 32.0
+offset_right = 914.0
+offset_bottom = 82.0
+theme_override_colors/font_color = Color(0.10, 0.34, 0.29, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleFoamDebugButton")
+theme_override_styles/hover = SubResource("StyleFoamDebugButton")
+theme_override_styles/pressed = SubResource("StyleFoamDebugButton")
+text = "收起浮沫调试  [F]"
+
+[node name="FoamDebugPanel" type="PanelContainer" parent="UI"]
+offset_left = 864.0
+offset_top = 96.0
+offset_right = 1246.0
+offset_bottom = 558.0
+theme_override_styles/panel = SubResource("StyleFoamDebugPanel")
+
+[node name="Margin" type="MarginContainer" parent="UI/FoamDebugPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="Content" type="VBoxContainer" parent="UI/FoamDebugPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Title" type="Label" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.90, 1, 0.98, 1)
+theme_override_font_sizes/font_size = 19
+text = "浮沫材质调试"
+
+[node name="Description" type="Label" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.60, 0.82, 0.79, 1)
+theme_override_font_sizes/font_size = 11
+text = "同一波相驱动岸线起伏与泛出泡沫 · 参数仅在本次运行生效"
+
+[node name="ShoreTitle" type="Label" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.94, 0.88, 1)
+theme_override_font_sizes/font_size = 14
+text = "波动岸线与泛泡"
+
+[node name="ShoreControls" type="VBoxContainer" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Divider" type="HSeparator" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="UI/FoamDebugPanel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ShowFoam" type="CheckButton" parent="UI/FoamDebugPanel/Margin/Content/Actions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.96, 0.93, 1)
+theme_override_font_sizes/font_size = 12
+button_pressed = true
+text = "显示"
+
+[node name="AnimateFoam" type="CheckButton" parent="UI/FoamDebugPanel/Margin/Content/Actions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.96, 0.93, 1)
+theme_override_font_sizes/font_size = 12
+button_pressed = true
+text = "动态"
+
+[node name="Spacer" type="Control" parent="UI/FoamDebugPanel/Margin/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Reset" type="Button" parent="UI/FoamDebugPanel/Margin/Content/Actions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.10, 0.34, 0.29, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleFoamDebugButton")
+theme_override_styles/hover = SubResource("StyleFoamDebugButton")
+theme_override_styles/pressed = SubResource("StyleFoamDebugButton")
+text = "恢复默认"
+
+[node name="StateLabel" type="Label" parent="UI"]
+offset_left = 34.0
+offset_top = 748.0
+offset_right = 310.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.18, 0.38, 0.24, 0.95)
+theme_override_font_sizes/font_size = 14
+text = "生长状态：生长"
+horizontal_alignment = 0
+
+[node name="Controls" type="Label" parent="UI"]
+offset_left = 770.0
+offset_top = 748.0
+offset_right = 1246.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.32, 0.48, 0.38, 0.85)
+theme_override_font_sizes/font_size = 13
+text = "视角 1 / 2 / 3    状态 B 裸土 · G 生长 · W 枯萎    F 浮沫面板"
+horizontal_alignment = 2

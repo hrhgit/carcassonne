@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="TileTopology3D" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_topology_3d.gd" id="1_topology"]
+
+[resource]
+script = ExtResource("1_topology")
+id = &"north_east_land_south_water_3d"
+edge_markers = PackedInt32Array(1, 1, 2, 0)
+land_region_ids = PackedStringArray("north_east_field")
+land_region_edge_masks = PackedInt32Array(3)
+double_land_topology = 1
+water_edges_ending_at_land = PackedInt32Array(2)
+visual_geometry_is_verified = true

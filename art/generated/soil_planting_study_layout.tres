@@ -1,0 +1,183 @@
+[gd_resource type="Resource" script_class="PlantScatterLayout3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/plant_scatter_placement_3d.gd" id="1_jkxkw"]
+[ext_resource type="Resource" path="res://art/plant_profiles/soil_sapling.tres" id="2_5od1s"]
+[ext_resource type="Resource" path="res://art/plant_profiles/soil_flower.tres" id="3_wka83"]
+[ext_resource type="Resource" path="res://art/plant_profiles/soil_herb.tres" id="4_17fdf"]
+[ext_resource type="Resource" path="res://art/planting_masks/soil_planting_study.tres" id="5_jomb7"]
+[ext_resource type="Script" path="res://scripts/plant_scatter_layout_3d.gd" id="6_syehs"]
+
+[sub_resource type="Resource" id="Resource_im3do"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("2_5od1s")
+local_position = Vector3(-0.09063077, 0.14, 0.26690888)
+yaw_degrees = 232.18066
+scale_multiplier = 0.91976774
+reveal_threshold = 0.19710524
+
+[sub_resource type="Resource" id="Resource_qocri"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("2_5od1s")
+local_position = Vector3(1.2645223, 0.14, -1.12912)
+yaw_degrees = 217.36504
+scale_multiplier = 0.9498617
+reveal_threshold = 0.7245194464921951
+
+[sub_resource type="Resource" id="Resource_sa6ac"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(-1.4286468, 0.14, -1.3261282)
+yaw_degrees = 16.141565
+scale_multiplier = 1.0539112
+reveal_threshold = 0.05975449510983059
+
+[sub_resource type="Resource" id="Resource_k4lo6"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(1.6145504, 0.14, 1.3725672)
+yaw_degrees = 308.54196
+scale_multiplier = 0.95392644
+reveal_threshold = 0.19601246288844518
+
+[sub_resource type="Resource" id="Resource_ksruj"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(-1.7178667, 0.14, 1.3407676)
+yaw_degrees = 219.39561
+scale_multiplier = 1.0327735
+reveal_threshold = 0.3498250033174242
+
+[sub_resource type="Resource" id="Resource_y2me3"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(-1.7196279, 0.14, -0.26574683)
+yaw_degrees = 5.9696684
+scale_multiplier = 0.92410237
+reveal_threshold = 0.4499477041619165
+
+[sub_resource type="Resource" id="Resource_5urf0"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(0.7454181, 0.14, 1.8067424)
+yaw_degrees = 268.1463
+scale_multiplier = 0.92341226
+reveal_threshold = 0.6809454219681876
+
+[sub_resource type="Resource" id="Resource_uvodh"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(-0.55486757, 0.14, -1.2769219)
+yaw_degrees = 142.79962
+scale_multiplier = 0.9621804
+reveal_threshold = 0.7864618982587542
+
+[sub_resource type="Resource" id="Resource_5yfrh"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("3_wka83")
+local_position = Vector3(1.1085227, 0.14, 0.73564863)
+yaw_degrees = 19.63874
+scale_multiplier = 1.0985638
+reveal_threshold = 0.9055155941418239
+
+[sub_resource type="Resource" id="Resource_qrrop"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-0.56225014, 0.14, 1.5801556)
+yaw_degrees = 227.7178
+scale_multiplier = 0.8981494
+reveal_threshold = 0.02
+
+[sub_resource type="Resource" id="Resource_wxy0h"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(1.7754185, 0.14, 0.27762842)
+yaw_degrees = 268.78046
+scale_multiplier = 0.9126878
+reveal_threshold = 0.11979213853677113
+
+[sub_resource type="Resource" id="Resource_krgri"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(0.1554625, 0.14, -1.6680193)
+yaw_degrees = 186.8843
+scale_multiplier = 0.8372452
+reveal_threshold = 0.1804907533029715
+
+[sub_resource type="Resource" id="Resource_3luy4"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-1.0008707, 0.14, 1.076411)
+yaw_degrees = 118.045235
+scale_multiplier = 1.1383638
+reveal_threshold = 0.29998937745889026
+
+[sub_resource type="Resource" id="Resource_anajw"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-1.2081692, 0.14, -0.7318891)
+yaw_degrees = 31.367441
+scale_multiplier = 0.8205694
+reveal_threshold = 0.3811693588892619
+
+[sub_resource type="Resource" id="Resource_7put8"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(0.020938873, 0.14, 1.6472011)
+yaw_degrees = 168.63867
+scale_multiplier = 0.8935014
+reveal_threshold = 0.4973529626925786
+
+[sub_resource type="Resource" id="Resource_5bgop"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(0.21010542, 0.14, -0.7473905)
+yaw_degrees = 329.11038
+scale_multiplier = 0.82812035
+reveal_threshold = 0.5751181393861771
+
+[sub_resource type="Resource" id="Resource_uqnv6"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-1.7304409, 0.14, 0.4922111)
+yaw_degrees = 349.26385
+scale_multiplier = 0.9814013
+reveal_threshold = 0.6283370951811472
+
+[sub_resource type="Resource" id="Resource_3whdr"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-1.4039145, 0.14, 1.9450438)
+yaw_degrees = 216.2317
+scale_multiplier = 0.98805934
+reveal_threshold = 0.7051492358247439
+
+[sub_resource type="Resource" id="Resource_p76ca"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-0.99806225, 0.14, -1.937265)
+yaw_degrees = 50.59121
+scale_multiplier = 0.9483146
+reveal_threshold = 0.7533520724003514
+
+[sub_resource type="Resource" id="Resource_p6vqq"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(1.594398, 0.14, 1.9575412)
+yaw_degrees = 165.53717
+scale_multiplier = 0.989211
+reveal_threshold = 0.8545707439382871
+
+[sub_resource type="Resource" id="Resource_5tnho"]
+script = ExtResource("1_jkxkw")
+profile = ExtResource("4_17fdf")
+local_position = Vector3(-1.2603437, 0.14, 0.18898535)
+yaw_degrees = 225.3886
+scale_multiplier = 0.97892725
+reveal_threshold = 0.98
+
+[resource]
+script = ExtResource("6_syehs")
+id = &"soil_planting_study_layout"
+planting_mask = ExtResource("5_jomb7")
+seed = 613907
+placements = Array[ExtResource("1_jkxkw")]([SubResource("Resource_im3do"), SubResource("Resource_qocri"), SubResource("Resource_sa6ac"), SubResource("Resource_k4lo6"), SubResource("Resource_ksruj"), SubResource("Resource_y2me3"), SubResource("Resource_5urf0"), SubResource("Resource_uvodh"), SubResource("Resource_5yfrh"), SubResource("Resource_qrrop"), SubResource("Resource_wxy0h"), SubResource("Resource_krgri"), SubResource("Resource_3luy4"), SubResource("Resource_anajw"), SubResource("Resource_7put8"), SubResource("Resource_5bgop"), SubResource("Resource_uqnv6"), SubResource("Resource_3whdr"), SubResource("Resource_p76ca"), SubResource("Resource_p6vqq"), SubResource("Resource_5tnho")])

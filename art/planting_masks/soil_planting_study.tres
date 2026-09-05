@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PlantingMask3D" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="1_mask"]
+
+[resource]
+script = ExtResource("1_mask")
+id = &"soil_planting_study"
+boundary = PackedVector2Array(-1.85, -2.30, 1.85, -2.30, 2.30, -1.85, 2.30, 1.85, 1.85, 2.30, -1.85, 2.30, -2.30, 1.85, -2.30, -1.85)
+edge_clearance = 0.14
+surface_height = 0.14

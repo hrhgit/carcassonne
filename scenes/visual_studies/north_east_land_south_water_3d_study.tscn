@@ -1,0 +1,139 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/north_east_land_south_water_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/north_east_land_south_water_3d.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentStudy"]
+background_mode = 1
+background_color = Color(0.045, 0.065, 0.055, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.64, 0.72, 0.66, 1)
+ambient_light_energy = 0.56
+ssao_enabled = true
+ssao_radius = 0.62
+ssao_intensity = 1.25
+
+[sub_resource type="StandardMaterial3D" id="MatTable"]
+albedo_color = Color(0.105, 0.14, 0.115, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="MeshTable"]
+material = SubResource("MatTable")
+size = Vector3(12, 0.34, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleInfoPanel"]
+bg_color = Color(0.025, 0.065, 0.047, 0.93)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.72, 0.53, 0.85)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="NorthEastLandSouthWaterStudy" type="Node3D"]
+script = ExtResource("1_study")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStudy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-51, -28, 0)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 1.34
+shadow_enabled = true
+directional_shadow_max_distance = 24.0
+
+[node name="Fill" type="OmniLight3D" parent="."]
+position = Vector3(-3.6, 4.4, 1.8)
+light_color = Color(0.46, 0.70, 0.90, 1)
+light_energy = 1.24
+omni_range = 10.0
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.38, 0)
+mesh = SubResource("MeshTable")
+
+[node name="NorthEastLandSouthWater3D" parent="." instance=ExtResource("2_tile")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+projection = 1
+size = 7.35
+near = 0.1
+far = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoPanel" type="Panel" parent="UI"]
+offset_left = 30.0
+offset_top = 28.0
+offset_right = 550.0
+offset_bottom = 198.0
+theme_override_styles/panel = SubResource("StyleInfoPanel")
+
+[node name="Title" type="Label" parent="UI/InfoPanel"]
+offset_left = 22.0
+offset_top = 16.0
+offset_right = 490.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(0.9, 0.98, 0.9, 1)
+theme_override_font_sizes/font_size = 25
+text = "正式地块 · 北东沃土 / 南侧入水"
+
+[node name="Subtitle" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 57.0
+offset_right = 490.0
+offset_bottom = 82.0
+theme_override_colors/font_color = Color(0.55, 0.79, 0.62, 1)
+theme_override_font_sizes/font_size = 14
+text = "N LAND · E LAND · S WATER · W EMPTY"
+
+[node name="Rule" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 88.0
+offset_right = 490.0
+offset_bottom = 113.0
+theme_override_colors/font_color = Color(0.79, 0.87, 0.76, 1)
+theme_override_font_sizes/font_size = 12
+text = "南侧中心水口沿中心方向进入，在同一北东沃土前停止"
+
+[node name="PlantRule" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 111.0
+offset_right = 490.0
+offset_bottom = 136.0
+theme_override_colors/font_color = Color(0.94, 0.82, 0.58, 1)
+theme_override_font_sizes/font_size = 12
+text = "固定花卉 + 草本布局；无树、无草地播种"
+
+[node name="StateLabel" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 140.0
+offset_right = 190.0
+offset_bottom = 165.0
+theme_override_colors/font_color = Color(0.94, 0.82, 0.58, 1)
+theme_override_font_sizes/font_size = 14
+text = "状态：生长"
+
+[node name="OwnerLabel" type="Label" parent="UI/InfoPanel"]
+offset_left = 215.0
+offset_top = 140.0
+offset_right = 490.0
+offset_bottom = 165.0
+theme_override_colors/font_color = Color(0.18, 0.52, 0.86, 1)
+theme_override_font_sizes/font_size = 14
+text = "玩家归属徽记：P1"
+
+[node name="Controls" type="Label" parent="UI"]
+offset_left = 32.0
+offset_top = 758.0
+offset_right = 1248.0
+offset_bottom = 790.0
+theme_override_colors/font_color = Color(0.77, 0.9, 0.78, 0.96)
+theme_override_font_sizes/font_size = 14
+text = "B 裸土    G 生长    W 枯萎    C 切换玩家归属徽记"
+horizontal_alignment = 1

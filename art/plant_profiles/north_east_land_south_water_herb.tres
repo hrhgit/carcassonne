@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PlantScatterProfile3D" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/plant_scatter_profile_3d.gd" id="1_profile"]
+[ext_resource type="PackedScene" path="res://scenes/plants/soil_herb.tscn" id="2_plant"]
+
+[resource]
+script = ExtResource("1_profile")
+id = &"north_east_field_herb"
+display_name = "北东沃土草本丛"
+plant_scene = ExtResource("2_plant")
+desired_count = 10
+footprint_radius = 0.16
+minimum_gap = 0.08
+extra_edge_clearance = 0.02
+minimum_scale = 0.82
+maximum_scale = 1.14
+cluster_chance = 0.14
+cluster_radius = 0.86
+placement_priority = 10

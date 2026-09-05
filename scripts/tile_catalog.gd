@@ -7,6 +7,7 @@ const BROOK_NOOK_SCENE := preload("res://scenes/tiles/brook_nook.tscn")
 const OPPOSITE_BANKS_SCENE := preload("res://scenes/tiles/opposite_banks.tscn")
 const RIVER_CROSS_SCENE := preload("res://scenes/tiles/river_cross.tscn")
 const THREE_SIDE_CANAL_SCENE := preload("res://scenes/tiles/three_side_canal.tscn")
+const THREE_LAND_RIVER_GARDEN_SCENE := preload("res://scenes/tiles/three_land_river_garden.tscn")
 const CORNER_BANK_SCENE := preload("res://scenes/tiles/corner_bank.tscn")
 const EMPTY := 0
 const LAND := 1
@@ -30,7 +31,7 @@ func build_deck() -> Array[TileDefinition]:
 		_definition(&"brook_nook_a", "溪畔小地", PackedInt32Array([LAND, EMPTY, WATER, EMPTY]), BROOK_NOOK_SCENE, 1103),
 		_definition(&"bank_pair_a", "双岸地块", PackedInt32Array([LAND, WATER, LAND, EMPTY]), OPPOSITE_BANKS_SCENE, 2221),
 		_definition(&"split_canal_a", "分流水渠", PackedInt32Array([WATER, LAND, WATER, LAND]), RIVER_CROSS_SCENE, 3371, 1),
-		_definition(&"three_side_a", "三边水渠", PackedInt32Array([LAND, LAND, WATER, LAND]), THREE_SIDE_CANAL_SCENE, 4493),
+		_definition(&"three_land_river_garden_a", "三边灌溉田", PackedInt32Array([LAND, LAND, WATER, LAND]), THREE_LAND_RIVER_GARDEN_SCENE, 4493),
 		_definition(&"heartland_a", "沃土中心", PackedInt32Array([LAND, LAND, LAND, LAND]), ALLUVIAL_CROSS_SCENE, 5519),
 		_definition(&"brook_nook_b", "溪畔小地", PackedInt32Array([LAND, EMPTY, WATER, EMPTY]), BROOK_NOOK_SCENE, 6131),
 		_definition(&"bank_pair_b", "双岸地块", PackedInt32Array([WATER, LAND, EMPTY, LAND]), OPPOSITE_BANKS_SCENE, 7247, 3),

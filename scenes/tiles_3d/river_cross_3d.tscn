@@ -1,215 +1,261 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_artwork"]
 [ext_resource type="ArrayMesh" path="res://art/generated/river_cross_bank_mesh.tres" id="2_bank_mesh"]
 [ext_resource type="ArrayMesh" path="res://art/generated/river_cross_water_mesh.tres" id="3_water_mesh"]
 [ext_resource type="Shader" path="res://shaders/low_poly_water.gdshader" id="4_water_shader"]
+[ext_resource type="ArrayMesh" path="res://art/generated/river_cross_land_north.tres" id="5_land_north"]
+[ext_resource type="ArrayMesh" path="res://art/generated/river_cross_land_south.tres" id="6_land_south"]
+[ext_resource type="NoiseTexture2D" path="res://art/generated/shoreline_foam_noise.tres" id="9_foam_noise"]
+[ext_resource type="Resource" path="res://art/topologies/river_cross_3d.tres" id="10_topology"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="11_base_material"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="12_meadow_material"]
+[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="13_soil_material"]
+[ext_resource type="Material" path="res://art/materials/terrain/river_bank.tres" id="14_bank_material"]
 
-[sub_resource type="StandardMaterial3D" id="MatBase"]
-albedo_color = Color(0.208, 0.118, 0.059, 1)
-roughness = 0.9
-
-[sub_resource type="StandardMaterial3D" id="MatFrame"]
-albedo_color = Color(0.66, 0.365, 0.16, 1)
-roughness = 0.72
-
-[sub_resource type="StandardMaterial3D" id="MatMeadow"]
-albedo_color = Color(0.29, 0.51, 0.19, 1)
-roughness = 0.96
-
-[sub_resource type="StandardMaterial3D" id="MatSoil"]
-albedo_color = Color(0.55, 0.29, 0.13, 1)
-roughness = 1.0
+[sub_resource type="StandardMaterial3D" id="MatGrassBlade"]
+albedo_color = Color(0.30, 0.48, 0.22, 1)
+roughness = 0.82
 
 [sub_resource type="StandardMaterial3D" id="MatSoilHighlight"]
-albedo_color = Color(0.71, 0.43, 0.225, 1)
-roughness = 0.96
-
-[sub_resource type="StandardMaterial3D" id="MatBank"]
-albedo_color = Color(0.115, 0.285, 0.205, 1)
-roughness = 0.94
+albedo_color = Color(0.60, 0.44, 0.28, 1)
+roughness = 0.90
 cull_mode = 2
 
 [sub_resource type="ShaderMaterial" id="MatWaterShader"]
 shader = ExtResource("4_water_shader")
-shader_parameter/deep_color = Color(0.025, 0.34, 0.52, 1)
-shader_parameter/shallow_color = Color(0.08, 0.67, 0.78, 1)
-shader_parameter/glint_color = Color(0.55, 0.96, 0.94, 1)
-shader_parameter/flow_speed = 0.85
-shader_parameter/wave_height = 0.012
+shader_parameter/deep_color = Color(0.10, 0.32, 0.49, 1)
+shader_parameter/middle_color = Color(0.12, 0.40, 0.57, 1)
+shader_parameter/shallow_color = Color(0.17, 0.49, 0.64, 1)
+shader_parameter/highlight_color = Color(0.72, 0.89, 0.94, 1)
+shader_parameter/roughness = 0.48
+shader_parameter/foam_texture = ExtResource("9_foam_noise")
+shader_parameter/foam_enabled = true
+shader_parameter/foam_animation_enabled = true
+shader_parameter/foam_line_width = 0.06
+shader_parameter/foam_width = 0.05
+shader_parameter/foam_scale = 10.7
+shader_parameter/foam_radius = 0.4
+shader_parameter/foam_cutoff = 0.6
+shader_parameter/foam_shoreline_length = 15.41997
+shader_parameter/foam_speed = 0.025
+shader_parameter/foam_wave_strength = 0.5
+shader_parameter/foam_wave_frequency = 10.0
 
-[sub_resource type="StandardMaterial3D" id="MatStem"]
-albedo_color = Color(0.16, 0.38, 0.105, 1)
-roughness = 0.92
-
-[sub_resource type="StandardMaterial3D" id="MatCrop"]
-albedo_color = Color(0.68, 0.72, 0.22, 1)
-roughness = 0.88
-
-[sub_resource type="StandardMaterial3D" id="MatWithered"]
-albedo_color = Color(0.47, 0.245, 0.09, 1)
-roughness = 1.0
+[sub_resource type="StandardMaterial3D" id="MatWoodDetail"]
+albedo_color = Color(0.52, 0.40, 0.28, 1)
+roughness = 0.75
 
 [sub_resource type="StandardMaterial3D" id="MatStone"]
-albedo_color = Color(0.72, 0.69, 0.52, 1)
+albedo_color = Color(0.80, 0.78, 0.72, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="MatStem"]
+albedo_color = Color(0.17, 0.42, 0.15, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="MatCabbage"]
+albedo_color = Color(0.20, 0.52, 0.19, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="MatCabbageCore"]
+albedo_color = Color(0.34, 0.66, 0.27, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="MatCropWheat"]
+albedo_color = Color(0.92, 0.76, 0.26, 1)
+roughness = 0.80
+
+[sub_resource type="StandardMaterial3D" id="MatCarrot"]
+albedo_color = Color(0.92, 0.44, 0.12, 1)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="MatFlowerWhite"]
+albedo_color = Color(0.98, 0.98, 0.95, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="MatFlowerCenter"]
+albedo_color = Color(0.96, 0.80, 0.18, 1)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="MatSaplingTrunk"]
+albedo_color = Color(0.30, 0.20, 0.11, 1)
+roughness = 0.92
+
+[sub_resource type="StandardMaterial3D" id="MatSaplingCrown"]
+albedo_color = Color(0.24, 0.55, 0.20, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="MatWitheredStem"]
+albedo_color = Color(0.65, 0.52, 0.35, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="MatWitheredHead"]
+albedo_color = Color(0.78, 0.65, 0.42, 1)
 roughness = 0.95
 
 [sub_resource type="BoxMesh" id="MeshBase"]
-material = SubResource("MatBase")
-size = Vector3(4.9, 0.32, 4.9)
+material = ExtResource("11_base_material")
+size = Vector3(4.9, 0.30, 4.9)
 
-[sub_resource type="BoxMesh" id="MeshMeadow"]
-material = SubResource("MatMeadow")
-size = Vector3(4.5, 0.14, 4.5)
+[sub_resource type="PlaneMesh" id="MeshMeadow"]
+material = ExtResource("12_meadow_material")
+size = Vector2(4.90, 4.90)
 
-[sub_resource type="BoxMesh" id="MeshFrameHorizontal"]
-material = SubResource("MatFrame")
-size = Vector3(4.9, 0.28, 0.22)
+[sub_resource type="BoxMesh" id="MeshMeadowPatchA"]
+material = ExtResource("12_meadow_material")
+size = Vector3(1.7, 0.015, 1.1)
 
-[sub_resource type="BoxMesh" id="MeshFrameVerticalSegment"]
-material = SubResource("MatFrame")
-size = Vector3(0.22, 0.28, 1.92)
+[sub_resource type="BoxMesh" id="MeshMeadowPatchB"]
+material = ExtResource("12_meadow_material")
+size = Vector3(1.5, 0.015, 1.2)
 
-[sub_resource type="BoxMesh" id="MeshLandEdge"]
-material = SubResource("MatSoil")
-size = Vector3(4.46, 0.2, 0.96)
+[sub_resource type="BoxMesh" id="MeshSluicePost"]
+material = SubResource("MatWoodDetail")
+size = Vector3(0.08, 0.26, 0.08)
 
-[sub_resource type="BoxMesh" id="MeshLandShoulder"]
-material = SubResource("MatSoil")
-size = Vector3(1.84, 0.2, 0.66)
-
-[sub_resource type="BoxMesh" id="MeshLandEdgeHighlight"]
-material = SubResource("MatSoilHighlight")
-size = Vector3(4.16, 0.035, 0.7)
-
-[sub_resource type="BoxMesh" id="MeshLandShoulderHighlight"]
-material = SubResource("MatSoilHighlight")
-size = Vector3(1.58, 0.035, 0.45)
-
-[sub_resource type="CylinderMesh" id="MeshCropStem"]
-material = SubResource("MatStem")
-top_radius = 0.025
-bottom_radius = 0.04
-height = 0.34
-radial_segments = 5
-rings = 1
-
-[sub_resource type="SphereMesh" id="MeshCropHead"]
-material = SubResource("MatCrop")
-radius = 0.105
-height = 0.2
-radial_segments = 5
-rings = 2
-
-[sub_resource type="CylinderMesh" id="MeshWitheredStem"]
-material = SubResource("MatWithered")
-top_radius = 0.018
-bottom_radius = 0.035
-height = 0.31
-radial_segments = 5
-rings = 1
+[sub_resource type="BoxMesh" id="MeshSluicePlank"]
+material = SubResource("MatWoodDetail")
+size = Vector3(0.54, 0.06, 0.12)
 
 [sub_resource type="SphereMesh" id="MeshStone"]
 material = SubResource("MatStone")
-radius = 0.12
-height = 0.16
+radius = 0.11
+height = 0.15
 radial_segments = 5
 rings = 2
+
+[sub_resource type="CylinderMesh" id="MeshGrassTuft"]
+material = SubResource("MatGrassBlade")
+top_radius = 0.01
+bottom_radius = 0.035
+height = 0.14
+radial_segments = 4
+rings = 1
+
+[sub_resource type="CylinderMesh" id="MeshCropStem"]
+material = SubResource("MatStem")
+top_radius = 0.024
+bottom_radius = 0.038
+height = 0.32
+radial_segments = 5
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshCabbageBase"]
+material = SubResource("MatCabbage")
+radius = 0.13
+height = 0.16
+radial_segments = 6
+rings = 2
+
+[sub_resource type="SphereMesh" id="MeshCabbageCore"]
+material = SubResource("MatCabbageCore")
+radius = 0.075
+height = 0.11
+radial_segments = 5
+rings = 2
+
+[sub_resource type="CylinderMesh" id="MeshWheatHead"]
+material = SubResource("MatCropWheat")
+top_radius = 0.032
+bottom_radius = 0.075
+height = 0.24
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="MeshCarrotRoot"]
+material = SubResource("MatCarrot")
+top_radius = 0.045
+bottom_radius = 0.02
+height = 0.08
+radial_segments = 5
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshFlowerPetal"]
+material = SubResource("MatFlowerWhite")
+radius = 0.055
+height = 0.045
+radial_segments = 4
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshFlowerCenter"]
+material = SubResource("MatFlowerCenter")
+radius = 0.035
+height = 0.04
+radial_segments = 4
+rings = 1
+
+[sub_resource type="CylinderMesh" id="MeshSaplingTrunk"]
+material = SubResource("MatSaplingTrunk")
+top_radius = 0.028
+bottom_radius = 0.042
+height = 0.38
+radial_segments = 5
+rings = 1
+
+[sub_resource type="SphereMesh" id="MeshSaplingCrown"]
+material = SubResource("MatSaplingCrown")
+radius = 0.18
+height = 0.27
+radial_segments = 6
+rings = 2
+
+[sub_resource type="CylinderMesh" id="MeshWitheredStem"]
+material = SubResource("MatWitheredStem")
+top_radius = 0.016
+bottom_radius = 0.032
+height = 0.30
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="MeshWitheredHead"]
+material = SubResource("MatWitheredHead")
+top_radius = 0.02
+bottom_radius = 0.06
+height = 0.20
+radial_segments = 5
+rings = 1
 
 [node name="RiverCross3D" type="Node3D"]
 script = ExtResource("1_artwork")
 edge_markers = PackedInt32Array(1, 2, 1, 2)
-preview_growth_state = 1
+topology = ExtResource("10_topology")
+require_topology = true
+preview_growth_state = 0
 
 [node name="Base" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.16, 0)
+position = Vector3(0, -0.15, 0)
 mesh = SubResource("MeshBase")
 
 [node name="Meadow" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.07, 0)
+position = Vector3(0, 0.14, 0)
 mesh = SubResource("MeshMeadow")
 
-[node name="Frame" type="Node3D" parent="."]
+[node name="MeadowPatchWest" type="MeshInstance3D" parent="Meadow"]
+position = Vector3(-1.1, 0.001, 0)
+rotation_degrees = Vector3(0, 18, 0)
+mesh = SubResource("MeshMeadowPatchA")
 
-[node name="North" type="MeshInstance3D" parent="Frame"]
-position = Vector3(0, 0.14, -2.34)
-mesh = SubResource("MeshFrameHorizontal")
-
-[node name="South" type="MeshInstance3D" parent="Frame"]
-position = Vector3(0, 0.14, 2.34)
-mesh = SubResource("MeshFrameHorizontal")
-
-[node name="EastNorth" type="MeshInstance3D" parent="Frame"]
-position = Vector3(2.34, 0.14, -1.31)
-mesh = SubResource("MeshFrameVerticalSegment")
-
-[node name="EastSouth" type="MeshInstance3D" parent="Frame"]
-position = Vector3(2.34, 0.14, 1.31)
-mesh = SubResource("MeshFrameVerticalSegment")
-
-[node name="WestNorth" type="MeshInstance3D" parent="Frame"]
-position = Vector3(-2.34, 0.14, -1.31)
-mesh = SubResource("MeshFrameVerticalSegment")
-
-[node name="WestSouth" type="MeshInstance3D" parent="Frame"]
-position = Vector3(-2.34, 0.14, 1.31)
-mesh = SubResource("MeshFrameVerticalSegment")
+[node name="MeadowPatchEast" type="MeshInstance3D" parent="Meadow"]
+position = Vector3(1.1, 0.001, -0.1)
+rotation_degrees = Vector3(0, -15, 0)
+mesh = SubResource("MeshMeadowPatchB")
 
 [node name="LandSoil" type="Node3D" parent="."]
 
-[node name="NorthEdge" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(0, 0.18, -1.76)
-mesh = SubResource("MeshLandEdge")
+[node name="NorthArcLand" type="MeshInstance3D" parent="LandSoil"]
+material_override = ExtResource("13_soil_material")
+mesh = ExtResource("5_land_north")
 
-[node name="NorthLeftShoulder" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(-1.31, 0.18, -0.95)
-mesh = SubResource("MeshLandShoulder")
-
-[node name="NorthRightShoulder" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(1.31, 0.18, -0.95)
-mesh = SubResource("MeshLandShoulder")
-
-[node name="SouthEdge" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(0, 0.18, 1.76)
-mesh = SubResource("MeshLandEdge")
-
-[node name="SouthLeftShoulder" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(-1.31, 0.18, 0.95)
-mesh = SubResource("MeshLandShoulder")
-
-[node name="SouthRightShoulder" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(1.31, 0.18, 0.95)
-mesh = SubResource("MeshLandShoulder")
-
-[node name="NorthEdgeHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(0, 0.2975, -1.79)
-mesh = SubResource("MeshLandEdgeHighlight")
-
-[node name="NorthLeftHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(-1.31, 0.2975, -0.95)
-mesh = SubResource("MeshLandShoulderHighlight")
-
-[node name="NorthRightHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(1.31, 0.2975, -0.95)
-mesh = SubResource("MeshLandShoulderHighlight")
-
-[node name="SouthEdgeHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(0, 0.2975, 1.79)
-mesh = SubResource("MeshLandEdgeHighlight")
-
-[node name="SouthLeftHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(-1.31, 0.2975, 0.95)
-mesh = SubResource("MeshLandShoulderHighlight")
-
-[node name="SouthRightHighlight" type="MeshInstance3D" parent="LandSoil"]
-position = Vector3(1.31, 0.2975, 0.95)
-mesh = SubResource("MeshLandShoulderHighlight")
+[node name="SouthArcLand" type="MeshInstance3D" parent="LandSoil"]
+material_override = ExtResource("13_soil_material")
+mesh = ExtResource("6_land_south")
 
 [node name="Water" type="Node3D" parent="."]
 
 [node name="RiverBed" type="MeshInstance3D" parent="Water"]
 position = Vector3(0, 0.15, 0)
-material_override = SubResource("MatBank")
+material_override = ExtResource("14_bank_material")
 mesh = ExtResource("2_bank_mesh")
 
 [node name="AnimatedSurface" type="MeshInstance3D" parent="Water"]
@@ -218,169 +264,359 @@ cast_shadow = 0
 material_override = SubResource("MatWaterShader")
 mesh = ExtResource("3_water_mesh")
 
+[node name="Decorations" type="Node3D" parent="."]
+
+[node name="NorthSluiceLeftPost" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-0.16, 0.22, -1.41)
+mesh = SubResource("MeshSluicePost")
+
+[node name="NorthSluiceRightPost" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.32, 0.22, -1.41)
+mesh = SubResource("MeshSluicePost")
+
+[node name="NorthSluiceBeam" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.08, 0.25, -1.41)
+mesh = SubResource("MeshSluicePlank")
+
+[node name="SouthSluiceLeftPost" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-0.11, 0.22, 1.41)
+mesh = SubResource("MeshSluicePost")
+
+[node name="SouthSluiceRightPost" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.37, 0.22, 1.41)
+mesh = SubResource("MeshSluicePost")
+
+[node name="SouthSluiceBeam" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.13, 0.25, 1.41)
+mesh = SubResource("MeshSluicePlank")
+
+[node name="StoneWest" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-1.75, 0.18, -0.35)
+rotation_degrees = Vector3(0, 22, 0)
+scale = Vector3(1.05, 0.8, 0.9)
+mesh = SubResource("MeshStone")
+
+[node name="StoneCenter" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-0.45, 0.17, 0.15)
+rotation_degrees = Vector3(0, -35, 0)
+scale = Vector3(0.72, 0.58, 0.7)
+mesh = SubResource("MeshStone")
+
+[node name="StoneEast" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(1.65, 0.18, 0.42)
+rotation_degrees = Vector3(0, -16, 0)
+scale = Vector3(0.85, 0.68, 1.0)
+mesh = SubResource("MeshStone")
+
+[node name="StoneNorthMeadow" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-0.85, 0.16, -1.08)
+rotation_degrees = Vector3(0, 32, 0)
+scale = Vector3(0.68, 0.55, 0.62)
+mesh = SubResource("MeshStone")
+
+[node name="StoneSouthMeadow" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.75, 0.16, 1.08)
+rotation_degrees = Vector3(0, -28, 0)
+scale = Vector3(0.62, 0.52, 0.58)
+mesh = SubResource("MeshStone")
+
+[node name="GrassTuft1" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-1.45, 0.19, -0.85)
+rotation_degrees = Vector3(10, 25, -12)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft2" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-1.38, 0.19, -0.92)
+rotation_degrees = Vector3(-8, 50, 15)
+scale = Vector3(0.85, 0.85, 0.85)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft3" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(1.42, 0.19, -0.82)
+rotation_degrees = Vector3(12, -40, 8)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft4" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(1.50, 0.19, -0.76)
+rotation_degrees = Vector3(-10, 15, -14)
+scale = Vector3(0.9, 0.9, 0.9)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft5" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-1.42, 0.19, 0.82)
+rotation_degrees = Vector3(8, -30, 10)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft6" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-1.48, 0.19, 0.75)
+rotation_degrees = Vector3(-12, 45, -15)
+scale = Vector3(0.85, 0.85, 0.85)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft7" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(1.45, 0.19, 0.85)
+rotation_degrees = Vector3(14, 20, -10)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft8" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(1.38, 0.19, 0.92)
+rotation_degrees = Vector3(-6, -60, 12)
+scale = Vector3(0.9, 0.9, 0.9)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft9" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(-0.62, 0.17, -0.65)
+rotation_degrees = Vector3(10, 10, -8)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="GrassTuft10" type="MeshInstance3D" parent="Decorations"]
+position = Vector3(0.58, 0.17, 0.65)
+rotation_degrees = Vector3(-8, 35, 12)
+mesh = SubResource("MeshGrassTuft")
+
 [node name="GrowingPlants" type="Node3D" parent="."]
+visible = false
 
-[node name="NStem1" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.55, 0.47, -1.78)
+[node name="NorthWildStemA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.48, 0.28, -1.96)
+scale = Vector3(0.72, 0.78, 0.72)
 mesh = SubResource("MeshCropStem")
 
-[node name="NHead1" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.55, 0.65, -1.78)
-mesh = SubResource("MeshCropHead")
+[node name="NorthGrassTuftA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.35, 0.22, -1.88)
+rotation_degrees = Vector3(5, 24, -8)
+mesh = SubResource("MeshGrassTuft")
 
-[node name="NStem2" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-0.75, 0.45, -1.62)
+[node name="NorthWildStemB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.58, 0.27, -1.72)
+scale = Vector3(0.62, 0.72, 0.62)
+rotation_degrees = Vector3(8, -18, 9)
+mesh = SubResource("MeshCropStem")
+
+[node name="NorthGrassTuftB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.42, 0.22, -1.82)
+rotation_degrees = Vector3(-8, 42, 12)
+scale = Vector3(0.86, 0.86, 0.86)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="NorthWildStemC" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.42, 0.28, -2.05)
+scale = Vector3(0.68, 0.76, 0.68)
+rotation_degrees = Vector3(-10, 20, -6)
+mesh = SubResource("MeshCropStem")
+
+[node name="NorthGrassTuftC" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.55, 0.22, -1.94)
+rotation_degrees = Vector3(7, -33, 9)
 scale = Vector3(0.9, 0.9, 0.9)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="NorthWildStemD" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.42, 0.27, -1.79)
+scale = Vector3(0.56, 0.70, 0.56)
+rotation_degrees = Vector3(6, 12, 14)
 mesh = SubResource("MeshCropStem")
 
-[node name="NHead2" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-0.75, 0.61, -1.62)
+[node name="NorthGrassTuftD" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.30, 0.22, -1.91)
+rotation_degrees = Vector3(-5, 30, -12)
+scale = Vector3(0.82, 0.82, 0.82)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="NorthShrubA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.94, 0.24, -1.87)
+scale = Vector3(1.15, 0.95, 1.1)
+mesh = SubResource("MeshCabbageBase")
+
+[node name="NorthShrubACrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.94, 0.31, -1.87)
+scale = Vector3(0.95, 0.90, 0.95)
+mesh = SubResource("MeshCabbageCore")
+
+[node name="NorthShrubB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.92, 0.23, -1.65)
+scale = Vector3(0.92, 0.85, 0.96)
+mesh = SubResource("MeshCabbageBase")
+
+[node name="NorthShrubBCrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.92, 0.30, -1.65)
+scale = Vector3(0.80, 0.78, 0.80)
+mesh = SubResource("MeshCabbageCore")
+
+[node name="SouthWildStemA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.42, 0.28, 1.94)
+scale = Vector3(0.66, 0.76, 0.66)
+rotation_degrees = Vector3(-8, 25, 10)
+mesh = SubResource("MeshCropStem")
+
+[node name="SouthGrassTuftA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.28, 0.22, 1.85)
+rotation_degrees = Vector3(5, -22, 8)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="SouthWildStemB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.25, 0.27, 2.04)
+scale = Vector3(0.56, 0.68, 0.56)
+rotation_degrees = Vector3(10, 18, -11)
+mesh = SubResource("MeshCropStem")
+
+[node name="SouthGrassTuftB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.38, 0.22, 1.88)
+rotation_degrees = Vector3(-7, 46, -9)
+scale = Vector3(0.88, 0.88, 0.88)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="SouthWildStemC" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.62, 0.28, 1.77)
+scale = Vector3(0.70, 0.78, 0.70)
+rotation_degrees = Vector3(-9, -20, 6)
+mesh = SubResource("MeshCropStem")
+
+[node name="SouthGrassTuftC" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.48, 0.22, 1.92)
+rotation_degrees = Vector3(8, -34, 11)
+scale = Vector3(0.92, 0.92, 0.92)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="SouthWildStemD" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.46, 0.27, 2.01)
+scale = Vector3(0.62, 0.70, 0.62)
+rotation_degrees = Vector3(6, -12, -15)
+mesh = SubResource("MeshCropStem")
+
+[node name="SouthGrassTuftD" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.32, 0.22, 1.84)
+rotation_degrees = Vector3(-6, 31, 13)
+scale = Vector3(0.84, 0.84, 0.84)
+mesh = SubResource("MeshGrassTuft")
+
+[node name="SouthShrubA" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.96, 0.24, 1.82)
+scale = Vector3(1.08, 0.92, 1.06)
+mesh = SubResource("MeshCabbageBase")
+
+[node name="SouthShrubACrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(0.96, 0.31, 1.82)
+scale = Vector3(0.92, 0.88, 0.92)
+mesh = SubResource("MeshCabbageCore")
+
+[node name="SouthShrubB" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.96, 0.23, 1.66)
+scale = Vector3(0.90, 0.84, 0.94)
+mesh = SubResource("MeshCabbageBase")
+
+[node name="SouthShrubBCrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-0.96, 0.30, 1.66)
+scale = Vector3(0.78, 0.76, 0.78)
+mesh = SubResource("MeshCabbageCore")
+
+[node name="NorthSaplingTrunk" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.22, 0.34, -1.62)
+rotation_degrees = Vector3(2, -12, 3)
+mesh = SubResource("MeshSaplingTrunk")
+
+[node name="NorthSaplingCrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.22, 0.55, -1.62)
+scale = Vector3(0.92, 0.9, 0.92)
+mesh = SubResource("MeshSaplingCrown")
+
+[node name="SouthSaplingTrunk" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.18, 0.34, 1.60)
+rotation_degrees = Vector3(-2, 16, -3)
+mesh = SubResource("MeshSaplingTrunk")
+
+[node name="SouthSaplingCrown" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.18, 0.55, 1.60)
+scale = Vector3(0.88, 0.92, 0.88)
+mesh = SubResource("MeshSaplingCrown")
+
+[node name="NorthWildflowerPetal" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.16, 0.40, -1.56)
+scale = Vector3(0.95, 0.95, 0.95)
+mesh = SubResource("MeshFlowerPetal")
+
+[node name="NorthWildflowerCenter" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(1.16, 0.425, -1.56)
+mesh = SubResource("MeshFlowerCenter")
+
+[node name="SouthWildflowerPetal" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.22, 0.40, 1.57)
 scale = Vector3(0.9, 0.9, 0.9)
-mesh = SubResource("MeshCropHead")
+mesh = SubResource("MeshFlowerPetal")
 
-[node name="NStem3" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(0.35, 0.48, -1.82)
-scale = Vector3(1.05, 1.05, 1.05)
-mesh = SubResource("MeshCropStem")
-
-[node name="NHead3" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(0.35, 0.67, -1.82)
-scale = Vector3(1.05, 1.05, 1.05)
-mesh = SubResource("MeshCropHead")
-
-[node name="NStem4" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.25, 0.46, -1.58)
-mesh = SubResource("MeshCropStem")
-
-[node name="NHead4" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.25, 0.64, -1.58)
-mesh = SubResource("MeshCropHead")
-
-[node name="NStem5" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.35, 0.455, -0.92)
-scale = Vector3(0.92, 0.92, 0.92)
-mesh = SubResource("MeshCropStem")
-
-[node name="NHead5" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.35, 0.62, -0.92)
-scale = Vector3(0.92, 0.92, 0.92)
-mesh = SubResource("MeshCropHead")
-
-[node name="NStem6" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.3, 0.47, -0.95)
-mesh = SubResource("MeshCropStem")
-
-[node name="NHead6" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.3, 0.65, -0.95)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem1" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.5, 0.46, 1.74)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead1" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.5, 0.64, 1.74)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem2" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-0.58, 0.48, 1.6)
-scale = Vector3(1.05, 1.05, 1.05)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead2" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-0.58, 0.67, 1.6)
-scale = Vector3(1.05, 1.05, 1.05)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem3" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(0.48, 0.45, 1.82)
-scale = Vector3(0.9, 0.9, 0.9)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead3" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(0.48, 0.61, 1.82)
-scale = Vector3(0.9, 0.9, 0.9)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem4" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.42, 0.475, 1.56)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead4" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.42, 0.655, 1.56)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem5" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.27, 0.47, 0.94)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead5" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(-1.27, 0.65, 0.94)
-mesh = SubResource("MeshCropHead")
-
-[node name="SStem6" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.3, 0.455, 0.91)
-scale = Vector3(0.92, 0.92, 0.92)
-mesh = SubResource("MeshCropStem")
-
-[node name="SHead6" type="MeshInstance3D" parent="GrowingPlants"]
-position = Vector3(1.3, 0.62, 0.91)
-scale = Vector3(0.92, 0.92, 0.92)
-mesh = SubResource("MeshCropHead")
+[node name="SouthWildflowerCenter" type="MeshInstance3D" parent="GrowingPlants"]
+position = Vector3(-1.22, 0.425, 1.57)
+mesh = SubResource("MeshFlowerCenter")
 
 [node name="WitheredPlants" type="Node3D" parent="."]
 visible = false
 
-[node name="NorthWilt1" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(-1.3, 0.43, -1.68)
-rotation_degrees = Vector3(0, 0, 31)
+[node name="NorthWilt1Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-1.25, 0.30, -1.92)
+rotation_degrees = Vector3(6, 0, 34)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="NorthWilt2" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(-0.58, 0.425, -1.5)
-rotation_degrees = Vector3(-22, 0, -24)
+[node name="NorthWilt1Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-1.10, 0.42, -1.92)
+rotation_degrees = Vector3(10, 0, 52)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="NorthWilt2Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-0.50, 0.31, -1.72)
+rotation_degrees = Vector3(-20, 15, -28)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="NorthWilt3" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(0.72, 0.42, -1.73)
-rotation_degrees = Vector3(18, 0, 34)
+[node name="NorthWilt2Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-0.60, 0.42, -1.70)
+rotation_degrees = Vector3(-30, 20, -42)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="NorthWilt3Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(0.65, 0.31, -2.02)
+rotation_degrees = Vector3(16, -10, 36)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="NorthWilt4" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(1.38, 0.42, -1.04)
-rotation_degrees = Vector3(0, 20, -30)
+[node name="NorthWilt3Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(0.80, 0.42, -2.00)
+rotation_degrees = Vector3(24, -15, 54)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="NorthWilt4Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(1.28, 0.30, -1.78)
+rotation_degrees = Vector3(0, 24, -32)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="SouthWilt1" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(-1.35, 0.42, 1.64)
-rotation_degrees = Vector3(0, 0, -34)
+[node name="SouthWilt1Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-1.25, 0.30, 1.92)
+rotation_degrees = Vector3(-6, 0, -34)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="SouthWilt2" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(-0.48, 0.43, 1.49)
-rotation_degrees = Vector3(25, 0, 23)
+[node name="SouthWilt1Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-1.38, 0.42, 1.92)
+rotation_degrees = Vector3(-10, 0, -52)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="SouthWilt2Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-0.45, 0.31, 2.02)
+rotation_degrees = Vector3(22, 12, 26)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="SouthWilt3" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(0.68, 0.42, 1.72)
-rotation_degrees = Vector3(-15, 0, -32)
+[node name="SouthWilt2Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(-0.36, 0.42, 2.04)
+rotation_degrees = Vector3(32, 16, 40)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="SouthWilt3Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(0.60, 0.31, 1.76)
+rotation_degrees = Vector3(-14, -8, -34)
 mesh = SubResource("MeshWitheredStem")
 
-[node name="SouthWilt4" type="MeshInstance3D" parent="WitheredPlants"]
-position = Vector3(1.35, 0.43, 1.02)
-rotation_degrees = Vector3(0, -18, 28)
+[node name="SouthWilt3Head" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(0.46, 0.42, 1.78)
+rotation_degrees = Vector3(-20, -12, -50)
+mesh = SubResource("MeshWitheredHead")
+
+[node name="SouthWilt4Stem" type="MeshInstance3D" parent="WitheredPlants"]
+position = Vector3(1.25, 0.30, 2.00)
+rotation_degrees = Vector3(0, -20, 30)
 mesh = SubResource("MeshWitheredStem")
-
-[node name="Decorations" type="Node3D" parent="."]
-
-[node name="StoneWest" type="MeshInstance3D" parent="Decorations"]
-position = Vector3(-1.84, 0.21, -0.5)
-rotation_degrees = Vector3(0, 24, 0)
-scale = Vector3(1.1, 0.85, 0.9)
-mesh = SubResource("MeshStone")
-
-[node name="StoneEast" type="MeshInstance3D" parent="Decorations"]
-position = Vector3(1.72, 0.2, 0.48)
-rotation_degrees = Vector3(0, -18, 0)
-scale = Vector3(0.82, 0.72, 1.05)
-mesh = SubResource("MeshStone")

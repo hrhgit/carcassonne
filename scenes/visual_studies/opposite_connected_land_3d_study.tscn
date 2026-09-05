@@ -1,0 +1,133 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/opposite_connected_land_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/opposite_connected_land_3d.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentStudy"]
+background_mode = 1
+background_color = Color(0.88, 0.91, 0.86, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.78, 0.70, 1)
+ambient_light_energy = 0.58
+ssao_enabled = true
+ssao_radius = 0.50
+ssao_intensity = 0.72
+
+[sub_resource type="StandardMaterial3D" id="MatTable"]
+albedo_color = Color(0.84, 0.81, 0.74, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="MeshTable"]
+material = SubResource("MatTable")
+size = Vector3(12, 0.32, 10)
+
+[sub_resource type="StyleBoxFlat" id="StylePanel"]
+bg_color = Color(0.96, 0.98, 0.96, 0.90)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.78, 0.68, 0.65)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="OppositeConnectedLand3DStudy" type="Node3D"]
+script = ExtResource("1_study")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStudy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-38, -36, 0)
+light_color = Color(1, 0.96, 0.90, 1)
+light_energy = 1.26
+shadow_enabled = true
+directional_shadow_max_distance = 22.0
+shadow_opacity = 0.86
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.5, 0)
+mesh = SubResource("MeshTable")
+
+[node name="OppositeConnectedLand3D" parent="." instance=ExtResource("2_tile")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+projection = 1
+size = 6.7
+near = 0.1
+far = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoPanel" type="Panel" parent="UI"]
+offset_left = 34.0
+offset_top = 30.0
+offset_right = 585.0
+offset_bottom = 152.0
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="Title" type="Label" parent="UI/InfoPanel"]
+offset_left = 22.0
+offset_top = 17.0
+offset_right = 530.0
+offset_bottom = 49.0
+theme_override_colors/font_color = Color(0.12, 0.32, 0.22, 1)
+theme_override_font_sizes/font_size = 24
+text = "OPPOSITE LAND · CENTER CONNECTED"
+
+[node name="Subtitle" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 58.0
+offset_right = 530.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.24, 0.48, 0.35, 1)
+theme_override_font_sizes/font_size = 14
+text = "北 / 南 LAND · 东 / 西 EMPTY · 无水流"
+
+[node name="MeshNote" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 88.0
+offset_right = 530.0
+offset_bottom = 110.0
+theme_override_colors/font_color = Color(0.38, 0.58, 0.45, 1)
+theme_override_font_sizes/font_size = 12
+text = "同一 north_south_field · 固定土壤网格 · Water 层为空"
+
+[node name="AngleBadge" type="Panel" parent="UI"]
+offset_left = 930.0
+offset_top = 32.0
+offset_right = 1246.0
+offset_bottom = 82.0
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="AngleLabel" type="Label" parent="UI"]
+offset_left = 954.0
+offset_top = 45.0
+offset_right = 1225.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.14, 0.40, 0.25, 1)
+theme_override_font_sizes/font_size = 16
+text = "55° 斜俯视 · 正交投影"
+horizontal_alignment = 1
+
+[node name="StateLabel" type="Label" parent="UI"]
+offset_left = 34.0
+offset_top = 748.0
+offset_right = 330.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.18, 0.38, 0.24, 0.95)
+theme_override_font_sizes/font_size = 14
+text = "生长状态：裸土"
+
+[node name="Controls" type="Label" parent="UI"]
+offset_left = 690.0
+offset_top = 748.0
+offset_right = 1246.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.32, 0.48, 0.38, 0.85)
+theme_override_font_sizes/font_size = 13
+text = "视角 1 / 2 / 3    B 裸土 · G 生长 · W 枯萎"
+horizontal_alignment = 2

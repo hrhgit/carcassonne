@@ -1,0 +1,158 @@
+[gd_resource type="Resource" script_class="PlantScatterLayout3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/plant_scatter_placement_3d.gd" id="1_sr3l7"]
+[ext_resource type="Resource" path="res://art/plant_profiles/north_east_land_south_water_flower.tres" id="2_m52h7"]
+[ext_resource type="Resource" path="res://art/plant_profiles/north_east_land_south_water_herb.tres" id="3_qjj08"]
+[ext_resource type="Resource" path="res://art/planting_masks/north_east_land_south_water_field.tres" id="4_p3a4j"]
+[ext_resource type="Script" path="res://scripts/plant_scatter_layout_3d.gd" id="5_a0uqa"]
+
+[sub_resource type="Resource" id="Resource_dmhim"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(0.90043926, 0.19, -0.73778915)
+yaw_degrees = 121.31916
+scale_multiplier = 1.0771402
+reveal_threshold = 0.11432871
+
+[sub_resource type="Resource" id="Resource_wdcus"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(1.4669311, 0.19, 0.57315016)
+yaw_degrees = 290.64816
+scale_multiplier = 0.9179106
+reveal_threshold = 0.22659634798765182
+
+[sub_resource type="Resource" id="Resource_t0sr6"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(-0.04084444, 0.19, -0.38192248)
+yaw_degrees = 88.82061
+scale_multiplier = 1.0694927
+reveal_threshold = 0.2807280980050564
+
+[sub_resource type="Resource" id="Resource_r6gxn"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(-0.41540325, 0.19, -1.3071163)
+yaw_degrees = 244.3698
+scale_multiplier = 1.022429
+reveal_threshold = 0.42550558
+
+[sub_resource type="Resource" id="Resource_1ma1o"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(0.762418, 0.19, 0.07229161)
+yaw_degrees = 154.3735
+scale_multiplier = 0.97840893
+reveal_threshold = 0.6078357771039009
+
+[sub_resource type="Resource" id="Resource_y2h0o"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(0.4449206, 0.19, -1.5559565)
+yaw_degrees = 322.9353
+scale_multiplier = 0.94663715
+reveal_threshold = 0.6331502
+
+[sub_resource type="Resource" id="Resource_kqqla"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(1.4623883, 0.19, -1.326603)
+yaw_degrees = 17.620493
+scale_multiplier = 0.9695366
+reveal_threshold = 0.8245814368128777
+
+[sub_resource type="Resource" id="Resource_wvy66"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("2_m52h7")
+local_position = Vector3(1.628105, 0.19, -0.5575772)
+yaw_degrees = 176.69902
+scale_multiplier = 0.9826518
+reveal_threshold = 0.9558072313666344
+
+[sub_resource type="Resource" id="Resource_h1x52"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(0.19587469, 0.19, -0.9931046)
+yaw_degrees = 17.82008
+scale_multiplier = 1.1289644
+reveal_threshold = 0.05235814452171326
+
+[sub_resource type="Resource" id="Resource_lrohi"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(-0.48861778, 0.19, -0.7645688)
+yaw_degrees = 309.7937
+scale_multiplier = 1.0235138
+reveal_threshold = 0.17736510634422303
+
+[sub_resource type="Resource" id="Resource_caiok"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(1.7678528, 0.19, 0.08283329)
+yaw_degrees = 212.3355
+scale_multiplier = 1.0136634
+reveal_threshold = 0.23458240628242494
+
+[sub_resource type="Resource" id="Resource_cyqr0"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(-0.17562902, 0.19, -1.7237055)
+yaw_degrees = 268.8476
+scale_multiplier = 1.0217162
+reveal_threshold = 0.3160317361354828
+
+[sub_resource type="Resource" id="Resource_ec7uv"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(1.6482899, 0.19, 1.0960221)
+yaw_degrees = 275.84387
+scale_multiplier = 1.0538973
+reveal_threshold = 0.49005584716796874
+
+[sub_resource type="Resource" id="Resource_yumb8"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(0.5135224, 0.19, -0.38858318)
+yaw_degrees = 190.31401
+scale_multiplier = 1.1173077
+reveal_threshold = 0.5236867994070054
+
+[sub_resource type="Resource" id="Resource_aqd68"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(1.3047571, 0.19, 0.047991514)
+yaw_degrees = 249.94917
+scale_multiplier = 0.94172966
+reveal_threshold = 0.6671736180782318
+
+[sub_resource type="Resource" id="Resource_lj47t"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(-0.8612615, 0.19, -1.5214934)
+yaw_degrees = 100.92466
+scale_multiplier = 0.8531736
+reveal_threshold = 0.7530304968357087
+
+[sub_resource type="Resource" id="Resource_uod1p"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(0.28211474, 0.19, 0.06402016)
+yaw_degrees = 105.48589
+scale_multiplier = 0.86279255
+reveal_threshold = 0.810595840960741
+
+[sub_resource type="Resource" id="Resource_ot8i2"]
+script = ExtResource("1_sr3l7")
+profile = ExtResource("3_qjj08")
+local_position = Vector3(1.1929636, 0.19, -1.7644699)
+yaw_degrees = 190.34795
+scale_multiplier = 0.8899068
+reveal_threshold = 0.9534324526786804
+
+[resource]
+script = ExtResource("5_a0uqa")
+id = &"north_east_land_south_water_flower_herb"
+planting_mask = ExtResource("4_p3a4j")
+seed = 420317
+placements = Array[ExtResource("1_sr3l7")]([SubResource("Resource_dmhim"), SubResource("Resource_wdcus"), SubResource("Resource_t0sr6"), SubResource("Resource_r6gxn"), SubResource("Resource_1ma1o"), SubResource("Resource_y2h0o"), SubResource("Resource_kqqla"), SubResource("Resource_wvy66"), SubResource("Resource_h1x52"), SubResource("Resource_lrohi"), SubResource("Resource_caiok"), SubResource("Resource_cyqr0"), SubResource("Resource_ec7uv"), SubResource("Resource_yumb8"), SubResource("Resource_aqd68"), SubResource("Resource_lj47t"), SubResource("Resource_uod1p"), SubResource("Resource_ot8i2")])
