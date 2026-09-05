@@ -1,0 +1,217 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork.gd" id="1_artwork"]
+
+[node name="RiverCross" type="Node2D"]
+script = ExtResource("1_artwork")
+edge_markers = PackedInt32Array(1, 2, 1, 2)
+
+[node name="NorthLandFill" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-106, -106, 106, -106, 94, -84, 76, -64, 52, -48, 28, -36, 8, -28, -8, -28, -28, -36, -52, -48, -76, -64, -94, -84, -106, -106)
+color = Color(0.690196, 0.486275, 0.290196, 1)
+
+[node name="NorthLandHighlight" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-100, -102, 100, -102, 92, -84, 74, -64, 50, -48, 26, -36, 6, -30, -6, -30, -26, -36, -50, -48, -74, -64, -92, -84, -100, -102)
+color = Color(0.84, 0.62, 0.42, 0.5)
+
+[node name="NorthLandBorder" type="Line2D" parent="."]
+points = PackedVector2Array(-106, -106, 106, -106, 94, -84, 76, -64, 52, -48, 28, -36, 8, -28, -8, -28, -28, -36, -52, -48, -76, -64, -94, -84, -106, -106)
+width = 4.0
+default_color = Color(0.290196, 0.164706, 0.0784314, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="SouthLandFill" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-106, 106, -94, 84, -76, 64, -52, 48, -28, 36, -8, 28, 8, 28, 28, 36, 52, 48, 76, 64, 94, 84, 106, 106, -106, 106)
+color = Color(0.690196, 0.486275, 0.290196, 1)
+
+[node name="SouthLandHighlight" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-100, 102, -92, 84, -74, 64, -50, 48, -26, 36, -6, 30, 6, 30, 26, 36, 50, 48, 74, 64, 92, 84, 100, 102, -100, 102)
+color = Color(0.84, 0.62, 0.42, 0.5)
+
+[node name="SouthLandBorder" type="Line2D" parent="."]
+points = PackedVector2Array(-106, 106, -94, 84, -76, 64, -52, 48, -28, 36, -8, 28, 8, 28, 28, 36, 52, 48, 76, 64, 94, 84, 106, 106, -106, 106)
+width = 4.0
+default_color = Color(0.290196, 0.164706, 0.0784314, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="NorthTuftA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 1, 4, 1, 0, -6)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="NorthTuftB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-5, 1, 5, 1, 0, -7)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="NorthTuftC" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, 1, 3, 1, 0, -5)
+color = Color(0.34, 0.56, 0.26, 0.8)
+
+[node name="SouthTuftA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 1, 4, 1, 0, 6)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="SouthTuftB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-5, 1, 5, 1, 0, 7)
+color = Color(0.30, 0.52, 0.24, 0.85)
+
+[node name="SouthTuftC" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, 1, 3, 1, 0, 5)
+color = Color(0.34, 0.56, 0.26, 0.8)
+
+[node name="NorthPebble" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-60, -90, -54, -90, -54, -86, -60, -86)
+color = Color(0.86, 0.80, 0.65, 0.7)
+
+[node name="SouthPebble" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(50, 86, 56, 86, 56, 90, 50, 90)
+color = Color(0.86, 0.80, 0.65, 0.7)
+
+[node name="WaterEastTrunkBank" type="Line2D" parent="."]
+points = PackedVector2Array(106, 0, 80, -2, 50, -3, 22, -2, 0, 0)
+width = 22.0
+default_color = Color(0.286275, 0.494118, 0.435294, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterWestTrunkBank" type="Line2D" parent="."]
+points = PackedVector2Array(-106, 0, -80, 2, -50, 3, -22, 2, 0, 0)
+width = 22.0
+default_color = Color(0.286275, 0.494118, 0.435294, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterNorthBank" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, -2, -15, -1, -28, 0, -42)
+width = 20.0
+default_color = Color(0.286275, 0.494118, 0.435294, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterSouthBank" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 2, 15, 1, 28, 0, 42)
+width = 20.0
+default_color = Color(0.286275, 0.494118, 0.435294, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterEastTrunk" type="Line2D" parent="."]
+points = PackedVector2Array(106, 0, 78, -1, 50, -2, 22, -1, 0, 0)
+width = 14.0
+default_color = Color(0.223529, 0.623529, 0.768627, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterWestTrunk" type="Line2D" parent="."]
+points = PackedVector2Array(-106, 0, -78, 1, -50, 2, -22, 1, 0, 0)
+width = 14.0
+default_color = Color(0.223529, 0.623529, 0.768627, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterNorth" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, -1, -15, 0, -28, 0, -40)
+width = 13.0
+default_color = Color(0.223529, 0.623529, 0.768627, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterSouth" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 1, 15, 0, 28, 0, 40)
+width = 13.0
+default_color = Color(0.223529, 0.623529, 0.768627, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterEastTrunkHighlight" type="Line2D" parent="."]
+points = PackedVector2Array(102, 0, 78, -1, 50, -2, 22, -1, 0, 0)
+width = 4.0
+default_color = Color(0.509804, 0.858824, 0.886275, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterWestTrunkHighlight" type="Line2D" parent="."]
+points = PackedVector2Array(-102, 0, -78, 1, -50, 2, -22, 1, 0, 0)
+width = 4.0
+default_color = Color(0.509804, 0.858824, 0.886275, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterNorthHighlight" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 0, -15, 0, -28, 0, -38)
+width = 3.5
+default_color = Color(0.509804, 0.858824, 0.886275, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterSouthHighlight" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 0, 15, 0, 28, 0, 38)
+width = 3.5
+default_color = Color(0.509804, 0.858824, 0.886275, 1)
+antialiased = true
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="WaterRippleA" type="Line2D" parent="."]
+points = PackedVector2Array(72, -6, 84, -6)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.65)
+antialiased = true
+
+[node name="WaterRippleB" type="Line2D" parent="."]
+points = PackedVector2Array(36, 4, 48, 4)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.55)
+antialiased = true
+
+[node name="WaterRippleC" type="Line2D" parent="."]
+points = PackedVector2Array(-72, 6, -84, 6)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.65)
+antialiased = true
+
+[node name="WaterRippleD" type="Line2D" parent="."]
+points = PackedVector2Array(-36, -4, -48, -4)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.55)
+antialiased = true
+
+[node name="WaterRippleE" type="Line2D" parent="."]
+points = PackedVector2Array(-8, -14, -8, -22)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.6)
+antialiased = true
+
+[node name="WaterRippleF" type="Line2D" parent="."]
+points = PackedVector2Array(6, 16, 6, 24)
+width = 1.5
+default_color = Color(0.85, 0.96, 0.98, 0.6)
+antialiased = true
