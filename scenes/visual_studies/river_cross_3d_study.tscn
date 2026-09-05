@@ -1,0 +1,147 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/river_cross_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/river_cross_3d.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentStudy"]
+background_mode = 1
+background_color = Color(0.018, 0.075, 0.061, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.52, 0.67, 0.57, 1)
+ambient_light_energy = 0.68
+
+[sub_resource type="StandardMaterial3D" id="MatTable"]
+albedo_color = Color(0.025, 0.13, 0.105, 1)
+roughness = 0.93
+
+[sub_resource type="BoxMesh" id="MeshTable"]
+material = SubResource("MatTable")
+size = Vector3(12, 0.32, 10)
+
+[sub_resource type="StyleBoxFlat" id="StyleInfoPanel"]
+bg_color = Color(0.018, 0.075, 0.061, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.65, 0.45, 0.52)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBadge"]
+bg_color = Color(0.075, 0.22, 0.16, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.48, 0.8, 0.53, 0.65)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="RiverCross3DStudy" type="Node3D"]
+script = ExtResource("1_study")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStudy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -38, 0)
+light_color = Color(1, 0.87, 0.68, 1)
+light_energy = 1.35
+shadow_enabled = true
+directional_shadow_max_distance = 22.0
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+position = Vector3(-3.5, 4.8, 3.2)
+light_color = Color(0.55, 0.78, 1, 1)
+light_energy = 1.1
+omni_range = 12.0
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.5, 0)
+mesh = SubResource("MeshTable")
+
+[node name="RiverCross3D" parent="." instance=ExtResource("2_tile")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+projection = 1
+size = 6.7
+near = 0.1
+far = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="InfoPanel" type="Panel" parent="UI"]
+offset_left = 34.0
+offset_top = 30.0
+offset_right = 520.0
+offset_bottom = 148.0
+theme_override_styles/panel = SubResource("StyleInfoPanel")
+
+[node name="Title" type="Label" parent="UI/InfoPanel"]
+offset_left = 22.0
+offset_top = 17.0
+offset_right = 458.0
+offset_bottom = 49.0
+theme_override_colors/font_color = Color(0.91, 0.96, 0.78, 1)
+theme_override_font_sizes/font_size = 24
+text = "RIVER CROSS · LOW-POLY 3D"
+
+[node name="Subtitle" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 58.0
+offset_right = 458.0
+offset_bottom = 83.0
+theme_override_colors/font_color = Color(0.65, 0.82, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "固定预制件 · 东西中心水口 · 南北整边土地"
+
+[node name="MeshNote" type="Label" parent="UI/InfoPanel"]
+offset_left = 23.0
+offset_top = 87.0
+offset_right = 458.0
+offset_bottom = 108.0
+theme_override_colors/font_color = Color(0.49, 0.7, 0.58, 0.8)
+theme_override_font_sizes/font_size = 12
+text = "固定低模曲线河床 · Shader 动态水面"
+
+[node name="AngleBadge" type="Panel" parent="UI"]
+offset_left = 930.0
+offset_top = 32.0
+offset_right = 1246.0
+offset_bottom = 82.0
+theme_override_styles/panel = SubResource("StyleBadge")
+
+[node name="AngleLabel" type="Label" parent="UI"]
+offset_left = 954.0
+offset_top = 45.0
+offset_right = 1225.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.88, 0.97, 0.82, 1)
+theme_override_font_sizes/font_size = 16
+text = "55° 斜俯视 · 正交投影"
+horizontal_alignment = 1
+
+[node name="StateLabel" type="Label" parent="UI"]
+offset_left = 34.0
+offset_top = 748.0
+offset_right = 310.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.77, 0.9, 0.66, 0.92)
+theme_override_font_sizes/font_size = 14
+text = "生长状态：生长"
+
+[node name="Controls" type="Label" parent="UI"]
+offset_left = 770.0
+offset_top = 748.0
+offset_right = 1246.0
+offset_bottom = 777.0
+theme_override_colors/font_color = Color(0.55, 0.74, 0.62, 0.82)
+theme_override_font_sizes/font_size = 13
+text = "视角 1 / 2 / 3    状态 B 裸土 · G 生长 · W 枯萎"
+horizontal_alignment = 2
