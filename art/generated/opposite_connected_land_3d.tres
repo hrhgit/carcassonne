@@ -1,0 +1,12 @@
+[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-2.45, 0.152, -2.45, 4.9, 1e-05, 4.9),
+"attribute_data": PackedByteArray("87izPTuRgT0FLyeyBS8nsgAAgD8FLyey4ohpP9nNbz8AAIA/AACAPwUvJ7IAAIA/5xQ8PucUPD7zuLM9O5GBPQAAgD8FLyeyxvpQP8b6UD/iiGk/2c1vPwUvJ7IAAIA/v4WAPnp/rj7nFDw+5xQ8PgAAgD8FLyeyIL0/P0PAKD/G+lA/xvpQPwUvJ7IAAIA/pz2RPgAAAD+/hYA+en+uPgAAgD8FLyeyLWE3PwAAAD8gvT8/Q8AoPwUvJ7IAAIA/pz2RPgAAAD8AAIA/BS8nsuKIaT87kYE9LWE3PwAAAD8FLyeyAACAP/O4sz3ZzW8/v4WAPkPAKD+nPZE+AAAAP+KIaT87kYE9IL0/P3p/rj4tYTc/AAAAP/O4sz3ZzW8/5xQ8Psb6UD+/hYA+Q8AoP+KIaT87kYE9xvpQP+cUPD4gvT8/en+uPvO4sz3ZzW8/87izPdnNbz/nFDw+xvpQP+KIaT87kYE94ohpPzuRgT3G+lA/5xQ8PvO4sz3ZzW8/"),
+"format": 34359738391,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 48,
+"vertex_data": PackedByteArray("rkcBwOOlGz7D9QjAzcwcwOOlGz7NzBzAzcwcQOOlGz7NzBzArkcBQOOlGz7D9QhAzcwcQOOlGz7NzBxAzcwcwOOlGz7NzBxAZmbGv+OlGz5mZsa/rkcBwOOlGz7D9QjAzcwcQOOlGz7NzBzAZmbGP+OlGz5mZsY/rkcBQOOlGz7D9QhAzcwcwOOlGz7NzBxA9iicv+OlGz4Urke/ZmbGv+OlGz5mZsa/zcwcQOOlGz7NzBzA9iicP+OlGz4Urkc/ZmbGP+OlGz5mZsY/zcwcwOOlGz7NzBxAFK6Hv+OlGz4AAAAA9iicv+OlGz4Urke/zcwcQOOlGz7NzBzAFK6HP+OlGz4AAAAA9iicP+OlGz4Urkc/zcwcwOOlGz7NzBxAFK6Hv+OlGz4AAAAAzcwcQOOlGz7NzBzArkcBQOOlGz7D9QjAFK6HP+OlGz4AAAAAzcwcwOOlGz7NzBxArkcBwOOlGz7D9QhA9iicv+OlGz4Urkc/FK6Hv+OlGz4AAAAArkcBQOOlGz7D9QjA9iicP+OlGz4Urke/FK6HP+OlGz4AAAAArkcBwOOlGz7D9QhAZmbGv+OlGz5mZsY/9iicv+OlGz4Urkc/rkcBQOOlGz7D9QjAZmbGP+OlGz5mZsa/9iicP+OlGz4Urke/rkcBwOOlGz7D9QhArkcBwOOlGz7D9QhAZmbGv+OlGz5mZsY/rkcBQOOlGz7D9QjArkcBQOOlGz7D9QjAZmbGP+OlGz5mZsa/rkcBwOOlGz7D9QhA/3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+/")
+}]
