@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dgmnqy0vpjrm0"
-path="res://.godot/imported/land_water_tile_preview.png-9b118af42dd32974c6f98ece2150e275.ctex"
+uid="uid://cbkydkyyhim8h"
+path="res://.godot/imported/river_cross_3d_55.png-01a221d385439b367d6ed14bb4d564a8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://artifacts/land_water_tile_preview.png"
-dest_files=["res://.godot/imported/land_water_tile_preview.png-9b118af42dd32974c6f98ece2150e275.ctex"]
+source_file="res://artifacts/river_cross_3d_55.png"
+dest_files=["res://.godot/imported/river_cross_3d_55.png-01a221d385439b367d6ed14bb4d564a8.ctex"]
 
 [params]
 
