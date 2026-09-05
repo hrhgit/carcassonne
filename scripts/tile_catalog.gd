@@ -31,12 +31,12 @@ func starter_tile() -> TileDefinition:
 	# 没指定 starter id 时，取 CSV 中第一条 card_type=starter 的记录
 	for def_id in _definitions.keys():
 		var def: TileDefinition = _definitions[def_id]
-		if def.card_type == "starter":
+		if def.card_type == TileDefinition.CARD_STARTER:
 			return def
 	return _fallback_starter()
 
 
-func build_deck(card_type := "tile") -> Array[TileDefinition]:
+func build_deck(card_type: int = TileDefinition.CARD_TILE) -> Array[TileDefinition]:
 	# 按 count 展开成实际牌堆数组
 	var deck: Array[TileDefinition] = []
 	for def_id in _definitions.keys():
@@ -49,7 +49,7 @@ func build_deck(card_type := "tile") -> Array[TileDefinition]:
 
 
 func river_setup_deck() -> Array[TileDefinition]:
-	return build_deck("river")
+	return build_deck(TileDefinition.CARD_RIVER)
 
 
 func has_definition(id: StringName) -> bool:
@@ -79,11 +79,19 @@ func _load_from_csv() -> void:
 		push_error("Cannot open %s (err %d)" % [TILES_CSV_PATH, FileAccess.get_open_error()])
 		return
 
-	var header_line := file.get_line()
+	var header_line := ""
+	var line_number := 1
+	# 跳过顶部注释行（# 开头），找到首条数据 header
+	while not file.eof_reached():
+		header_line = file.get_line()
+		line_number += 1
+		if header_line.strip_edges().is_empty():
+			continue
+		if not header_line.begins_with("#"):
+			break
 	var headers := _parse_csv_line(header_line)
 	var column_index := _index_columns(headers)
 
-	var line_number := 1
 	while not file.eof_reached():
 		var line := file.get_line()
 		line_number += 1
@@ -100,7 +108,7 @@ func _load_from_csv() -> void:
 			push_warning("Duplicate tile id %s in CSV; keeping the first one." % def.id)
 			continue
 		_definitions[def.id] = def
-		if def.card_type == "starter":
+		if def.card_type == TileDefinition.CARD_STARTER:
 			_starter_id = def.id
 
 
@@ -108,7 +116,7 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 	var def := TILE_DEFINITION_SCRIPT.new()
 	var id := StringName(fields[idx["id"]])
 	var name := fields[idx["display_name"]]
-	var card_type := fields[idx["card_type"]]
+	var card_type := _parse_card_type(fields[idx["card_type"]])
 	var count := int(fields[idx["count"]])
 	var edges := _parse_edge_list(fields, idx)
 	var ir_edges := _parse_ir_list(fields, idx)
@@ -119,10 +127,10 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 	var initial_growth := fields[idx["initial_growth"]] == "1"
 	var notes := fields[idx["notes"]]
 
-	# 内部连通性：CSV 用 N/E/S/W 字母串表示一个或多个子网（多个子网用逗号分隔）；
-	# 例如 "NESW" 表示一个含全部四条边的子网，"W,N" 表示两个独立子网。
-	var water_subnets := _parse_subnet_letters(fields, idx, "water_subnets")
-	var land_subnets := _parse_subnet_letters(fields, idx, "land_subnets")
+	# 内部连通性：CSV 用整数位掩码表示一个子网，多个子网用 ; 分隔。
+	# 位分配：bit0=N bit1=E bit2=S bit3=W；例如 15=NESW 一个子网；"1;2" = N+E 两个独立子网。
+	var water_subnets := _parse_subnet_mask(fields, idx, "water_subnets")
+	var land_subnets := _parse_subnet_mask(fields, idx, "land_subnets")
 
 	var scene_path := fields[idx["prefab_scene"]]
 	var scene: PackedScene = null
@@ -208,8 +216,14 @@ func _parse_ir_list(fields: PackedStringArray, idx: Dictionary) -> PackedInt32Ar
 	return ir
 
 
-func _parse_edge_kind(name: String) -> int:
-	match name:
+# 把 CSV 字符串解析为 EdgeKind。主路径：纯数字；兜底：英文 ENUM 名。
+func _parse_edge_kind(token: String) -> int:
+	var s := token.strip_edges()
+	if s.is_valid_int():
+		var v := int(s)
+		if v >= 0 and v < TileDefinition.EDGE_KIND_NAMES.size():
+			return v
+	match s.to_upper():
 		"EMPTY": return EMPTY
 		"LAND":  return LAND
 		"WATER": return WATER
@@ -218,8 +232,14 @@ func _parse_edge_kind(name: String) -> int:
 	return -1
 
 
-func _parse_center(name: String) -> int:
-	match name:
+# 把 CSV 字符串解析为 CenterKind。主路径：纯数字；兜底：英文 ENUM 名。
+func _parse_center(token: String) -> int:
+	var s := token.strip_edges()
+	if s.is_valid_int():
+		var v := int(s)
+		if v >= 0 and v < TileDefinition.CENTER_KIND_NAMES.size():
+			return v
+	match s.to_upper():
 		"EMPTY": return CENTER_EMPTY
 		"LAND":  return CENTER_LAND
 		"LAKE":  return CENTER_LAKE
@@ -227,31 +247,36 @@ func _parse_center(name: String) -> int:
 	return CENTER_EMPTY
 
 
-# 把 CSV 中"用 N/E/S/W 字母表示一个子网、; 分隔多子网"的字段解析为位掩码数组。
-# 例: "NESW" -> [15]; "W;N" -> [8, 1]; "" -> []
-# 注意：用 ; 分隔多子网，避免与 CSV 字段分隔符 , 冲突。
-func _parse_subnet_letters(fields: PackedStringArray, idx: Dictionary, col: String) -> Array:
+# 把 CSV 字符串解析为 card_type（int）。主路径：纯数字；兜底：英文 slug。
+func _parse_card_type(token: String) -> int:
+	var s := token.strip_edges()
+	if s.is_valid_int():
+		return int(s)
+	match s.to_lower():
+		"starter": return TileDefinition.CARD_STARTER
+		"tile":    return TileDefinition.CARD_TILE
+		"river":   return TileDefinition.CARD_RIVER
+	return TileDefinition.CARD_TILE
+
+
+# 把 CSV 中"用整数位掩码表示一个子网，; 分隔多子网"的字段解析为位掩码数组。
+# 例: "15" -> [15]；"8;1" -> [8, 1]；"" -> []
+# 位分配：N=1 E=2 S=4 W=8。
+func _parse_subnet_mask(fields: PackedStringArray, idx: Dictionary, col: String) -> Array:
 	if not idx.has(col):
 		return []
 	var raw := fields[idx[col]].strip_edges()
 	if raw.is_empty():
 		return []
 	var out: Array = []
-	# 支持多子网（; 分隔）
 	for group in raw.split(";"):
-		var letters := String(group).strip_edges()
-		if letters.is_empty():
+		var s := String(group).strip_edges()
+		if s.is_empty():
 			continue
-		var mask := 0
-		for ch in letters:
-			var upper := String(ch).to_upper()
-			match upper:
-				"N": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.NORTH)
-				"E": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.EAST)
-				"S": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.SOUTH)
-				"W": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.WEST)
-				_:
-					push_warning("Unknown edge letter '%s' in %s column; ignored." % [ch, col])
+		if not s.is_valid_int():
+			push_warning("Non-integer subnet '%s' in %s column; ignored." % [group, col])
+			continue
+		var mask := int(s)
 		if mask != 0:
 			out.append(mask)
 	return out
@@ -280,7 +305,7 @@ func _fallback_starter() -> TileDefinition:
 	def.configure(
 		&"_fallback_starter",
 		"默认起手",
-		"starter",
+		TileDefinition.CARD_STARTER,
 		1,
 		PackedInt32Array([LAND, LAND, LAND, LAND]),
 		PackedInt32Array([0, 0, 0, 0]),

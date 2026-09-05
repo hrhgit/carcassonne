@@ -25,13 +25,18 @@ enum CenterKind {
 	RIVER,
 }
 
+# card_type 数值编码（CSV 用纯数字，避免英文 slug）
+const CARD_STARTER := 0
+const CARD_TILE := 1
+const CARD_RIVER := 2
+
 const EDGE_KIND_NAMES := ["EMPTY", "LAND", "WATER", "RIVER", "BANK"]
 const CENTER_KIND_NAMES := ["EMPTY", "LAND", "LAKE", "RIVER"]
 const EDGE_LETTERS := ["N", "E", "S", "W"]
 
 var id: StringName
 var display_name := ""
-var card_type := "tile"          # starter / tile / river
+var card_type: int = CARD_TILE   # 0=starter 1=tile 2=river
 var count := 1
 var edges := PackedInt32Array([EdgeKind.EMPTY, EdgeKind.EMPTY, EdgeKind.EMPTY, EdgeKind.EMPTY])
 var ir_edges := PackedInt32Array([0, 0, 0, 0])  # 4 边各自的 IRRIGATION 修饰
@@ -59,7 +64,7 @@ var notes := ""
 func configure(
 	new_id: StringName,
 	new_display_name: String,
-	new_card_type: String,
+	new_card_type: int,
 	new_count: int,
 	new_edges: PackedInt32Array,
 	new_ir_edges: PackedInt32Array,
