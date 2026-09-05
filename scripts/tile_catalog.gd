@@ -2,7 +2,7 @@ class_name TileCatalog
 extends Node2D
 
 const TILE_DEFINITION_SCRIPT := preload("res://scripts/tile_definition.gd")
-const TILES_CSV_PATH := "res://data/tiles.csv"
+const TILES_CSV_PATH := "res://data/tiles_classic.csv"
 
 const EMPTY := TileDefinition.EdgeKind.EMPTY
 const LAND := TileDefinition.EdgeKind.LAND
@@ -119,6 +119,11 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 	var initial_growth := fields[idx["initial_growth"]] == "1"
 	var notes := fields[idx["notes"]]
 
+	# 内部连通性：CSV 用 N/E/S/W 字母串表示一个或多个子网（多个子网用逗号分隔）；
+	# 例如 "NESW" 表示一个含全部四条边的子网，"W,N" 表示两个独立子网。
+	var water_subnets := _parse_subnet_letters(fields, idx, "water_subnets")
+	var land_subnets := _parse_subnet_letters(fields, idx, "land_subnets")
+
 	var scene_path := fields[idx["prefab_scene"]]
 	var scene: PackedScene = null
 	if scene_path != "":
@@ -149,6 +154,8 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 		scene,
 		prefab_rotation,
 		notes,
+		water_subnets,
+		land_subnets,
 	)
 
 	if not def.is_playable():
@@ -165,7 +172,8 @@ func _index_columns(headers: PackedStringArray) -> Dictionary:
 	var required := ["id", "display_name", "card_type", "count",
 		"N", "E", "S", "W", "N_ir", "E_ir", "S_ir", "W_ir",
 		"center", "is_river_tile", "prefab_scene", "prefab_rotation",
-		"visual_seed", "initial_growth", "notes"]
+		"visual_seed", "initial_growth", "notes",
+		"water_subnets", "land_subnets"]
 	for col in required:
 		if not idx.has(col):
 			push_error("CSV missing required column '%s'" % col)
@@ -217,6 +225,36 @@ func _parse_center(name: String) -> int:
 		"LAKE":  return CENTER_LAKE
 		"RIVER": return CENTER_RIVER
 	return CENTER_EMPTY
+
+
+# 把 CSV 中"用 N/E/S/W 字母表示一个子网、; 分隔多子网"的字段解析为位掩码数组。
+# 例: "NESW" -> [15]; "W;N" -> [8, 1]; "" -> []
+# 注意：用 ; 分隔多子网，避免与 CSV 字段分隔符 , 冲突。
+func _parse_subnet_letters(fields: PackedStringArray, idx: Dictionary, col: String) -> Array:
+	if not idx.has(col):
+		return []
+	var raw := fields[idx[col]].strip_edges()
+	if raw.is_empty():
+		return []
+	var out: Array = []
+	# 支持多子网（; 分隔）
+	for group in raw.split(";"):
+		var letters := String(group).strip_edges()
+		if letters.is_empty():
+			continue
+		var mask := 0
+		for ch in letters:
+			var upper := String(ch).to_upper()
+			match upper:
+				"N": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.NORTH)
+				"E": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.EAST)
+				"S": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.SOUTH)
+				"W": mask |= TileDefinition.edge_bitmask(TileDefinition.Edge.WEST)
+				_:
+					push_warning("Unknown edge letter '%s' in %s column; ignored." % [ch, col])
+		if mask != 0:
+			out.append(mask)
+	return out
 
 
 func _prefab_matches_rule(visual_scene: PackedScene, edges: PackedInt32Array, visual_rotation_quarters: int) -> bool:
