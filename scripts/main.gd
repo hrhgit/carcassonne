@@ -405,10 +405,11 @@ func _try_place_current_tile(cell: Vector2i) -> void:
 		return
 	_add_placed_tile_visual(cell)
 	has_hovered_cell = false
+	current_rotation = 0
 	_refresh_preview()
 	# 镜头自动跟随：本回合新放的格子，让它落在画布中心
 	_center_camera_on(cell)
-	_set_toast("已放置 · 可继续放，或点「完成放置」", 2.0)
+	_set_toast("已放置 · 进入动作窗口（种植物 / 扩张 / 跳过）", 2.4)
 	queue_redraw()
 
 

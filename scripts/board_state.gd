@@ -53,6 +53,8 @@ func deal_tile(definition: TileDefinition) -> Dictionary:
 
 
 # 放置（manual by active_player 点空格）
+# —— 一次性动作：放成功后自动进入 ACTION_WINDOW 并清空 tile_to_place，
+#    玩家不能再用同一张待放块重复放置（卡卡颂原版规则）。
 func commit_placement(cell: Vector2i, quarter_turns: int) -> Dictionary:
 	if phase != Phase.PLACE:
 		return _verdict(false, "当前阶段不应放置（当前 phase=%d）。" % int(phase))
@@ -62,11 +64,18 @@ func commit_placement(cell: Vector2i, quarter_turns: int) -> Dictionary:
 	if not bool(result["valid"]):
 		return result
 	turn_placed_cells.append(cell)
+	# 一次性消费：吃完这块就进入动作窗口
+	tile_to_place = null
+	phase = Phase.ACTION_WINDOW
 	return result
 
 
 # 结束放置阶段（手动按"完成放置"按钮）→ 进入 ACTION_WINDOW
+# —— 现在已经由 commit_placement 自动完成；保留此函数兼容旧调用方，
+#    若当前已经不在 PLACE 阶段则返回 valid=true 的幂等响应。
 func finish_placement() -> Dictionary:
+	if phase == Phase.ACTION_WINDOW:
+		return _verdict(true, "已在动作窗口（commit_placement 已自动完成）。")
 	if phase != Phase.PLACE:
 		return _verdict(false, "当前不在放置阶段。")
 	phase = Phase.ACTION_WINDOW
