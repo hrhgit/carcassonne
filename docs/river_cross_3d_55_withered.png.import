@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bhqwa7cx6hgr0"
-path="res://.godot/imported/river_cross_3d_55_withered.png-3d9314f998ff5d124b175dc5e52558dc.ctex"
+path="res://.godot/imported/river_cross_3d_55_withered.png-77652c561597dfcfd1c976824baaa4df.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://artifacts/river_cross_3d_55_withered.png"
-dest_files=["res://.godot/imported/river_cross_3d_55_withered.png-3d9314f998ff5d124b175dc5e52558dc.ctex"]
+source_file="res://docs/river_cross_3d_55_withered.png"
+dest_files=["res://.godot/imported/river_cross_3d_55_withered.png-77652c561597dfcfd1c976824baaa4df.ctex"]
 
 [params]
 

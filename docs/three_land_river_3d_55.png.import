@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cnry7vpp5pd3"
-path="res://.godot/imported/three_land_river_3d_55.png-477ae7c2bed1fdccdb31df138b073e64.ctex"
+path="res://.godot/imported/three_land_river_3d_55.png-2484e1b6a0587131b12a9090b49c14e1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://artifacts/three_land_river_3d_55.png"
-dest_files=["res://.godot/imported/three_land_river_3d_55.png-477ae7c2bed1fdccdb31df138b073e64.ctex"]
+source_file="res://docs/three_land_river_3d_55.png"
+dest_files=["res://.godot/imported/three_land_river_3d_55.png-2484e1b6a0587131b12a9090b49c14e1.ctex"]
 
 [params]
 

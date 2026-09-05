@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c2y2dgucvhhy0"
-path="res://.godot/imported/soil_planting_study_growing_100_p2.png-2a409597f78666863518a0ac9aeb8bda.ctex"
+path="res://.godot/imported/soil_planting_study_growing_100_p2.png-7bdf3280e3230b4820a920fe2bc670f5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://artifacts/soil_planting_study_growing_100_p2.png"
-dest_files=["res://.godot/imported/soil_planting_study_growing_100_p2.png-2a409597f78666863518a0ac9aeb8bda.ctex"]
+source_file="res://docs/soil_planting_study_growing_100_p2.png"
+dest_files=["res://.godot/imported/soil_planting_study_growing_100_p2.png-7bdf3280e3230b4820a920fe2bc670f5.ctex"]
 
 [params]
 

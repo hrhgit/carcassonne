@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_7g6cu"]
+[ext_resource type="Resource" path="res://art/topologies/generated/procedural_water_ne.tres" id="2_qyp62"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="3_6s28f"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="4_gppde"]
+[ext_resource type="Material" path="res://art/materials/terrain/river_bank.tres" id="5_vp8o7"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_water_ne_river_bank.tres" id="6_de0p4"]
+[ext_resource type="Material" path="res://art/materials/water/generated/procedural_water_ne.tres" id="7_gfmwl"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_water_ne_water.tres" id="8_87bj2"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1ck8l"]
+material = ExtResource("3_6s28f")
+size = Vector3(4.9, 0.3, 4.9)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_u08mu"]
+material = ExtResource("4_gppde")
+size = Vector2(4.9, 4.9)
+
+[node name="WaterNe" type="Node3D" unique_id=1806564994]
+script = ExtResource("1_7g6cu")
+edge_markers = PackedInt32Array(2, 2, 0, 0)
+topology = ExtResource("2_qyp62")
+require_topology = true
+require_canonical_topology = true
+
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1289496167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+mesh = SubResource("BoxMesh_1ck8l")
+
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1575891270]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
+mesh = SubResource("PlaneMesh_u08mu")
+
+[node name="LandSoil" type="Node3D" parent="." unique_id=1511261141]
+
+[node name="Water" type="Node3D" parent="." unique_id=1954310367]
+
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=64970678]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+material_override = ExtResource("5_vp8o7")
+mesh = ExtResource("6_de0p4")
+
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=490912960]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+material_override = ExtResource("7_gfmwl")
+cast_shadow = 0
+mesh = ExtResource("8_87bj2")
+
+[node name="Decorations" type="Node3D" parent="." unique_id=2111127475]
+
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=11432841]
+
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=1880007664]

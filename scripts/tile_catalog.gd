@@ -1,5 +1,5 @@
 class_name TileCatalog
-extends Node2D
+extends Node
 
 const TILE_DEFINITION_SCRIPT := preload("res://scripts/tile_definition.gd")
 const TILES_CSV_PATH := "res://data/tiles_classic.csv"

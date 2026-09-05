@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bnamhc8tm2t8e"
-path="res://.godot/imported/river_cross_3d_55_growing.png-becff57f4ad4e6a314c2d3ff5a99fb9e.ctex"
+path="res://.godot/imported/river_cross_3d_55_growing.png-70b37e388cd74fcf12236b61d9a2ada7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://artifacts/river_cross_3d_55_growing.png"
-dest_files=["res://.godot/imported/river_cross_3d_55_growing.png-becff57f4ad4e6a314c2d3ff5a99fb9e.ctex"]
+source_file="res://docs/river_cross_3d_55_growing.png"
+dest_files=["res://.godot/imported/river_cross_3d_55_growing.png-70b37e388cd74fcf12236b61d9a2ada7.ctex"]
 
 [params]
 

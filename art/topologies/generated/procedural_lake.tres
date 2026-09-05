@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="TileTopology3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_topology_3d.gd" id="1_bsyib"]
+
+[resource]
+script = ExtResource("1_bsyib")
+id = &"lake"
+edge_markers = PackedInt32Array(0, 0, 0, 0)
+land_region_ids = PackedStringArray()
+land_region_edge_masks = PackedInt32Array()
+water_edges_ending_at_land = PackedInt32Array()
+water_edges_via_central_hub = PackedInt32Array()
+visual_geometry_is_verified = true

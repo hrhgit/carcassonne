@@ -60,3 +60,17 @@ res://tools/smoke_opposite_connected_land_runtime.gd` 再做一次入树运行�
 则隐藏两层。它没有树苗，也不把 `MEADOW` 装饰计入播种植物。用
 `scenes/visual_studies/north_east_land_south_water_3d_study.tscn` 观察，按 `B / G / W` 切换
 裸土、生长和枯萎，按 `C` 只切换植物的归属徽记颜色。
+
+---
+
+## 参数化生成固定 3D 地块
+
+`tools/generate_tile_3d_prefab.gd` 读取 `tools/tile_specs_3d/*.json` 的边口、土地连通区及水路，并在编辑／构建期输出一个完整的固定 3D `.tscn`、每片土地网格、河床和水面网格、静态 `TileTopology3D` 资源及该地块独有的水材质。水网格在最终融合后的河岸上烘焙 `UV2.x = d` 与 `UV2.y = s`；运行时绝不从这些参数重新拼装地形。
+
+当前样例是 `north_east_land_south_water.json`。北、东两条完整 LAND 边属于同一个 `north_east_field`，南侧 WATER 从边中心进入并在该田块停止，西侧保留 MEADOW。生成命令：
+
+```powershell
+godot --headless --path . --script res://tools/generate_tile_3d_prefab.gd
+```
+
+输出位于 `scenes/tiles_3d/generated/`，可独立在 Godot 中修改；`scenes/visual_studies/generated_north_east_land_south_water_3d_study.tscn` 可用 `B/G/W` 查看裸土、生长和枯萎状态。

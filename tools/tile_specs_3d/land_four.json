@@ -1,0 +1,24 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_four",
+	"edges": [
+		"LAND",
+		"LAND",
+		"LAND",
+		"LAND"
+	],
+	"id": "land_four",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH",
+				"EAST",
+				"SOUTH",
+				"WEST"
+			],
+			"id": "region_0"
+		}
+	],
+	"seed": 20262016,
+	"water_routes": []
+}

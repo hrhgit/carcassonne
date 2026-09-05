@@ -1,0 +1,14 @@
+{
+	"center": "lake",
+	"display_name": "程序化：lake",
+	"edges": [
+		"EMPTY",
+		"EMPTY",
+		"EMPTY",
+		"EMPTY"
+	],
+	"id": "lake",
+	"land_regions": [],
+	"seed": 20260905,
+	"water_routes": []
+}

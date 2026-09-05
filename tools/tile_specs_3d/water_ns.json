@@ -1,0 +1,23 @@
+{
+	"center": "hub",
+	"display_name": "程序化：water_ns",
+	"edges": [
+		"WATER",
+		"EMPTY",
+		"WATER",
+		"EMPTY"
+	],
+	"id": "water_ns",
+	"land_regions": [],
+	"seed": 20262925,
+	"water_routes": [
+		{
+			"from": "NORTH",
+			"via_hub": true
+		},
+		{
+			"from": "SOUTH",
+			"via_hub": true
+		}
+	]
+}

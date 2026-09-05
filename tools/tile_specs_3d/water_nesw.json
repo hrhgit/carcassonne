@@ -1,0 +1,31 @@
+{
+	"center": "hub",
+	"display_name": "程序化：water_nesw",
+	"edges": [
+		"WATER",
+		"WATER",
+		"WATER",
+		"WATER"
+	],
+	"id": "water_nesw",
+	"land_regions": [],
+	"seed": 20263127,
+	"water_routes": [
+		{
+			"from": "NORTH",
+			"via_hub": true
+		},
+		{
+			"from": "EAST",
+			"via_hub": true
+		},
+		{
+			"from": "SOUTH",
+			"via_hub": true
+		},
+		{
+			"from": "WEST",
+			"via_hub": true
+		}
+	]
+}

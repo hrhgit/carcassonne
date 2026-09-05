@@ -1,6 +1,8 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://art/models/plants/soil_herb_quaternius_growing.glb" id="2_growing"]
+[ext_resource type="PackedScene" path="res://art/models/plants/soil_herb_quaternius_withered.glb" id="3_withered"]
 
 [sub_resource type="StandardMaterial3D" id="MatStem"]
 albedo_color = Color(0.185, 0.31, 0.12, 1)
@@ -76,96 +78,97 @@ rings = 1
 script = ExtResource("1_script")
 species_id = &"soil_herb"
 
-[node name="GrowingParts" type="Node3D" parent="."]
+[node name="LegacyGrowingParts" type="Node3D" parent="."]
+visible = false
 
-[node name="StemCenter" type="MeshInstance3D" parent="GrowingParts"]
+[node name="StemCenter" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0, 0.24, 0)
 mesh = SubResource("MeshStem")
 
-[node name="StemWest" type="MeshInstance3D" parent="GrowingParts"]
+[node name="StemWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(-0.08, 0.20, 0.015)
 rotation_degrees = Vector3(8, 0, 23)
 scale = Vector3(0.85, 0.86, 0.85)
 mesh = SubResource("MeshStem")
 
-[node name="StemEast" type="MeshInstance3D" parent="GrowingParts"]
+[node name="StemEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0.09, 0.20, -0.02)
 rotation_degrees = Vector3(-11, 10, -26)
 scale = Vector3(0.84, 0.88, 0.84)
 mesh = SubResource("MeshStem")
 
-[node name="StemBack" type="MeshInstance3D" parent="GrowingParts"]
+[node name="StemBack" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0.015, 0.19, -0.09)
 rotation_degrees = Vector3(-24, 4, -7)
 scale = Vector3(0.72, 0.82, 0.72)
 mesh = SubResource("MeshStem")
 
-[node name="LeafWest" type="MeshInstance3D" parent="GrowingParts"]
+[node name="LeafWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(-0.115, 0.19, 0.025)
 rotation_degrees = Vector3(8, 0, 65)
 scale = Vector3(0.42, 0.88, 0.38)
 mesh = SubResource("MeshLeaf")
 
-[node name="LeafEast" type="MeshInstance3D" parent="GrowingParts"]
+[node name="LeafEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0.115, 0.18, -0.015)
 rotation_degrees = Vector3(-8, 18, -61)
 scale = Vector3(0.42, 0.84, 0.38)
 mesh = SubResource("MeshLeaf")
 
-[node name="LeafFront" type="MeshInstance3D" parent="GrowingParts"]
+[node name="LeafFront" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0.005, 0.17, 0.105)
 rotation_degrees = Vector3(64, 9, -4)
 scale = Vector3(0.38, 0.74, 0.42)
 mesh = SubResource("MeshLeaf")
 
-[node name="SeedHeadCenter" type="MeshInstance3D" parent="GrowingParts"]
+[node name="SeedHeadCenter" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0, 0.51, 0)
 mesh = SubResource("MeshSeedHead")
 
-[node name="SeedHeadWest" type="MeshInstance3D" parent="GrowingParts"]
+[node name="SeedHeadWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(-0.16, 0.39, 0.015)
 rotation_degrees = Vector3(7, 0, 23)
 scale = Vector3(0.88, 0.88, 0.88)
 mesh = SubResource("MeshSeedHead")
 
-[node name="SeedHeadEast" type="MeshInstance3D" parent="GrowingParts"]
+[node name="SeedHeadEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
 position = Vector3(0.17, 0.38, -0.02)
 rotation_degrees = Vector3(-10, 10, -26)
 scale = Vector3(0.84, 0.84, 0.84)
 mesh = SubResource("MeshSeedHead")
 
-[node name="WitheredParts" type="Node3D" parent="."]
+[node name="LegacyWitheredParts" type="Node3D" parent="."]
 visible = false
 
-[node name="DryStemCenter" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryStemCenter" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(-0.025, 0.16, 0)
 rotation_degrees = Vector3(2, 0, 30)
 mesh = SubResource("MeshDryStem")
 
-[node name="DryStemEast" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryStemEast" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(0.09, 0.15, -0.03)
 rotation_degrees = Vector3(-18, 13, -34)
 scale = Vector3(0.84, 0.9, 0.84)
 mesh = SubResource("MeshDryStem")
 
-[node name="DryStemWest" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryStemWest" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(-0.105, 0.14, 0.03)
 rotation_degrees = Vector3(13, -8, 42)
 scale = Vector3(0.72, 0.80, 0.72)
 mesh = SubResource("MeshDryStem")
 
-[node name="DryHeadCenter" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryHeadCenter" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(0.065, 0.32, 0)
 rotation_degrees = Vector3(4, 0, 42)
 mesh = SubResource("MeshDryHead")
 
-[node name="DryHeadEast" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryHeadEast" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(0.17, 0.27, -0.03)
 rotation_degrees = Vector3(-22, 14, -42)
 scale = Vector3(0.86, 0.86, 0.86)
 mesh = SubResource("MeshDryHead")
 
-[node name="DryHeadWest" type="MeshInstance3D" parent="WitheredParts"]
+[node name="DryHeadWest" type="MeshInstance3D" parent="LegacyWitheredParts"]
 position = Vector3(-0.20, 0.24, 0.03)
 rotation_degrees = Vector3(15, -9, 50)
 scale = Vector3(0.78, 0.78, 0.78)
@@ -175,3 +178,12 @@ mesh = SubResource("MeshDryHead")
 position = Vector3(0, 0.016, 0)
 mesh = SubResource("MeshOwnerMarker")
 material_override = SubResource("MatOwnerMarker")
+
+[node name="GrowingParts" type="Node3D" parent="."]
+
+[node name="QuaterniusGrassClump" parent="GrowingParts" instance=ExtResource("2_growing")]
+
+[node name="WitheredParts" type="Node3D" parent="."]
+visible = false
+
+[node name="QuaterniusDryGrassClump" parent="WitheredParts" instance=ExtResource("3_withered")]

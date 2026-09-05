@@ -50,7 +50,9 @@ func is_structurally_valid() -> bool:
 	var land_mask := _marker_mask(EdgeKind.LAND)
 	var water_mask := _marker_mask(EdgeKind.WATER)
 	if water_mask != 0 and land_mask == 0:
-		return false
+		# A pure-water tile is valid only when every water port passes through
+		# the central hub; the water then continues to LAND on a neighbour.
+		return _has_complete_water_routing(water_mask) and water_edges_ending_at_land.is_empty()
 	if land_region_ids.size() != land_region_edge_masks.size():
 		return false
 
