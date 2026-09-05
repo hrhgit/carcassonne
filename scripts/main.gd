@@ -1163,6 +1163,8 @@ func _run_rule_contract_smoke() -> bool:
 	if sample_tile == null:
 		sample_tile = tile_catalog.build_deck()[0]
 	sandbox.start_with(starter)
+	if not _run_three_land_river_prefab_smoke():
+		return false
 
 	if bool(sandbox.can_place(sample_tile, Vector2i(4, 4), 0)["valid"]):
 		push_error("Rule smoke test failed: disconnected placement was accepted.")
@@ -1187,6 +1189,52 @@ func _run_rule_contract_smoke() -> bool:
 		return false
 	if bool(sandbox.can_place(sample_tile, Vector2i(0, -2), 0)["valid"]):
 		push_error("Rule smoke test failed: disconnected placement was accepted at (0,-2).")
+		return false
+	return true
+
+
+func _run_three_land_river_prefab_smoke() -> bool:
+	var garden_definition: TileDefinition
+	for definition in tile_catalog.build_deck():
+		if definition.id == &"three_land_river_garden_a":
+			garden_definition = definition
+			break
+	if garden_definition == null or garden_definition.visual_scene == null:
+		push_error("Tile smoke test failed: the three-land river prefab is absent from the playable deck.")
+		return false
+
+	var garden := garden_definition.visual_scene.instantiate() as ThreeLandRiverTile
+	if garden == null:
+		push_error("Tile smoke test failed: the three-land river prefab did not instantiate as its authored tile type.")
+		return false
+	garden.hide()
+	add_child(garden)
+
+	var west_field := garden.get_node_or_null(^"WestField") as FieldGrowthState
+	var east_field := garden.get_node_or_null(^"EastField") as FieldGrowthState
+	if west_field == null or east_field == null:
+		garden.queue_free()
+		push_error("Tile smoke test failed: the three-land river prefab is missing one of its authored fields.")
+		return false
+
+	var west_bare := west_field.get_node_or_null(^"BareDetails") as CanvasItem
+	var west_growing := west_field.get_node_or_null(^"GrowingDetails") as CanvasItem
+	var east_bare := east_field.get_node_or_null(^"BareDetails") as CanvasItem
+	var east_wilted := east_field.get_node_or_null(^"WiltedDetails") as CanvasItem
+	if west_bare == null or west_growing == null or east_bare == null or east_wilted == null:
+		garden.queue_free()
+		push_error("Tile smoke test failed: an authored crop-state layer is missing from the three-land river prefab.")
+		return false
+
+	var states_are_valid := garden.sow_field(&"west_field") and garden.wilt_field(&"east_field")
+	states_are_valid = states_are_valid and west_field.growth_state == FieldGrowthState.GrowthState.GROWING
+	states_are_valid = states_are_valid and east_field.growth_state == FieldGrowthState.GrowthState.WILTED
+	states_are_valid = states_are_valid and not west_bare.visible and west_growing.visible
+	states_are_valid = states_are_valid and not east_bare.visible and east_wilted.visible
+	garden.queue_free()
+
+	if not states_are_valid:
+		push_error("Tile smoke test failed: the two authored fields did not switch between bare, growing, and wilted layers independently.")
 		return false
 	return true
 

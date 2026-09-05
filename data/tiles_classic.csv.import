@@ -6,10 +6,7 @@ uid="uid://c2lcndfiqb4is"
 
 [deps]
 
-files=["res://data/tiles_classic.display.translation", "res://data/tiles_classic.card.translation", "res://data/tiles_classic.count.translation", "res://data/tiles_classic.N.translation", "res://data/tiles_classic.E.translation", "res://data/tiles_classic.S.translation", "res://data/tiles_classic.W.translation", "res://data/tiles_classic.N.translation", "res://data/tiles_classic.E.translation", "res://data/tiles_classic.S.translation", "res://data/tiles_classic.W.translation", "res://data/tiles_classic.center.translation", "res://data/tiles_classic.is.translation", "res://data/tiles_classic.water.translation", "res://data/tiles_classic.land.translation", "res://data/tiles_classic.en.translation", "res://data/tiles_classic.prefab.translation", "res://data/tiles_classic.visual.translation", "res://data/tiles_classic.initial.translation", "res://data/tiles_classic.notes.translation"]
-
 source_file="res://data/tiles_classic.csv"
-dest_files=["res://data/tiles_classic.display.translation", "res://data/tiles_classic.card.translation", "res://data/tiles_classic.count.translation", "res://data/tiles_classic.N.translation", "res://data/tiles_classic.E.translation", "res://data/tiles_classic.S.translation", "res://data/tiles_classic.W.translation", "res://data/tiles_classic.N.translation", "res://data/tiles_classic.E.translation", "res://data/tiles_classic.S.translation", "res://data/tiles_classic.W.translation", "res://data/tiles_classic.center.translation", "res://data/tiles_classic.is.translation", "res://data/tiles_classic.water.translation", "res://data/tiles_classic.land.translation", "res://data/tiles_classic.en.translation", "res://data/tiles_classic.prefab.translation", "res://data/tiles_classic.visual.translation", "res://data/tiles_classic.initial.translation", "res://data/tiles_classic.notes.translation"]
 
 [params]
 

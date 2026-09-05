@@ -6,6 +6,7 @@
 # 例: 单子网 NESW 写 15; 多子网 W+N 写 8;1
 id,display_name,card_type,count,N,E,S,W,N_ir,E_ir,S_ir,W_ir,center,is_river_tile,water_subnets,land_subnets,prefab_scene,prefab_rotation,visual_seed,initial_growth,notes
 starter_verdant_cross,沃土中央,0,1,1,1,1,1,0,0,0,0,1,0,,15,,0,1,1,起手地块：整块可种植沃土
+three_land_river_garden_a,三边灌溉田,1,1,1,1,2,1,1,1,0,1,0,0,4,11,res://scenes/tiles/three_land_river_garden.tscn,0,4493,0,三条土地边属于同一土地块；南侧水流经北、东、西土地接口供水
 city_cap_road_a,城边小路,1,2,1,0,0,2,0,0,0,0,0,0,,1,,0,2,0,经典R1C1：单边城墙+路(count2)
 monastery_lake,修道院之湖,1,4,0,0,0,0,0,0,0,0,2,0,,,,0,3,0,经典R1C2：修道院→中心湖泊(count4)
 city_cap_shield_a,城边·盾徽,1,1,1,0,0,0,0,0,0,0,0,0,,1,,0,4,0,经典R1C3：单边城墙+盾徽(count1)

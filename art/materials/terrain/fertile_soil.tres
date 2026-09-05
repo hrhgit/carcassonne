@@ -1,0 +1,12 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/stylized_soil.gdshader" id="1_soil_shader"]
+
+[resource]
+resource_name = "Fertile Soil"
+shader = ExtResource("1_soil_shader")
+shader_parameter/fertile_earth = Color(0.32, 0.235, 0.16, 1)
+shader_parameter/moss_tint = Color(0.29, 0.33, 0.21, 1)
+shader_parameter/color_variation = 0.05
+shader_parameter/moss_strength = 0.11
+shader_parameter/roughness = 0.92

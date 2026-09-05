@@ -2,9 +2,23 @@ extends Node3D
 
 const UI_FONT_SCRIPT := preload("res://scripts/ui_font.gd")
 const CAMERA_DISTANCE := 9.0
-const CAMERA_AZIMUTH_DEGREES := 45.0
+# Face the south port in the study so the reference layout reads directly:
+# the only water mouth is visually at the bottom centre of the preview.
+const CAMERA_AZIMUTH_DEGREES := 0.0
 const CAMERA_TARGET := Vector3(0.0, 0.12, 0.0)
 const FOAM_DEBUG_CAMERA_OFFSET := 0.90
+# The narrow south water tongue ends at the rounded meadow lobe's inner soil
+# boundary. It must touch the field without turning the green lobe into water.
+const RIVER_HEAD := Vector2(0.0, 1.60)
+const LAND_INNER := Vector2(0.0, 1.48)
+const MEADOW_LOBE_PROBE := Vector2(0.0, 2.08)
+const FIELD_CENTRE := Vector2(0.0, 0.0)
+const FIELD_EDGE_PROBES := {
+	&"north": Vector2(0.0, -2.20),
+	&"west": Vector2(-2.20, 0.0),
+	&"east": Vector2(2.20, 0.0),
+}
+const FIELD_CONNECTIVITY_STEP := 0.20
 const FOAM_CONTROL_DEFINITIONS: Array[Dictionary] = [
 	{
 		"parameter": &"foam_line_width",
@@ -65,7 +79,7 @@ const FOAM_CONTROL_DEFINITIONS: Array[Dictionary] = [
 ]
 
 @onready var camera: Camera3D = $Camera3D
-@onready var tile: TileArtwork3D = $RiverCross3D
+@onready var tile: TileArtwork3D = $ThreeLandRiver3D
 @onready var angle_label: Label = $UI/AngleLabel
 @onready var state_label: Label = $UI/StateLabel
 @onready var controls_hint: Label = $UI/Controls
@@ -122,7 +136,7 @@ func _ready() -> void:
 		_set_foam_debug_panel_visible(false)
 	else:
 		_set_foam_debug_panel_visible(true)
-	DisplayServer.window_set_title("碧水沃野 · River Cross 3D Study")
+	DisplayServer.window_set_title("碧水沃野 · 三边沃野 3D Study")
 
 	if capture_requested:
 		call_deferred("_capture_preview")
@@ -311,34 +325,38 @@ func _capture_preview() -> void:
 	DirAccess.make_dir_recursive_absolute(capture_directory)
 	var angle_number := int(round(elevation_degrees))
 	var debug_suffix := "_foam_debug" if capture_debug_ui else ""
-	var output_path := capture_directory.path_join("river_cross_3d_%d%s%s.png" % [angle_number, state_capture_suffix, debug_suffix])
-	var save_error := get_viewport().get_texture().get_image().save_png(output_path)
-	if save_error != OK:
-		push_error("Failed to save River Cross 3D preview: %s" % error_string(save_error))
+	var output_path := capture_directory.path_join("three_land_river_3d_%d%s%s.png" % [angle_number, state_capture_suffix, debug_suffix])
+	# A --headless run uses the dummy rendering server, so the viewport has no
+	# texture to read. Report that clearly instead of dereferencing null and
+	# leaving the process running forever.
+	var image := get_viewport().get_texture().get_image()
+	if image == null:
+		push_error("Cannot capture %s: the viewport produced no texture. Run the study with a real display driver instead of --headless." % output_path)
 		get_tree().quit(1)
 		return
-	print("RIVER_CROSS_3D_CAPTURE: %s" % output_path)
+	var save_error := image.save_png(output_path)
+	if save_error != OK:
+		push_error("Failed to save three-edge land 3D preview: %s" % error_string(save_error))
+		get_tree().quit(1)
+		return
+	print("THREE_LAND_RIVER_3D_CAPTURE: %s" % output_path)
 	get_tree().quit()
 
 
 func _run_study_smoke() -> void:
 	await get_tree().process_frame
-	var expected_edges := PackedInt32Array([1, 2, 1, 2])
+	var expected_edges := PackedInt32Array([1, 1, 2, 1])
 	for quarter_turns in range(4):
 		for edge in range(4):
 			var expected_marker := expected_edges[int(posmod(edge - quarter_turns, 4))]
 			if tile.edge_marker_at(edge, quarter_turns) != expected_marker:
-				push_error("3D prefab port metadata no longer matches LAND/WATER/LAND/WATER after a 90-degree rotation.")
+				push_error("3D prefab port metadata no longer matches LAND/LAND/WATER/LAND after a 90-degree rotation.")
 				get_tree().quit(1)
 				return
 
 	var mesh_nodes := tile.find_children("*", "MeshInstance3D", true, false)
 	if mesh_nodes.size() < 40:
 		push_error("3D prefab lost its authored mesh composition.")
-		get_tree().quit(1)
-		return
-	if tile.get_node_or_null("Frame") != null:
-		push_error("3D prefab still contains the retired wooden edge fence.")
 		get_tree().quit(1)
 		return
 	var meadow := tile.get_node_or_null("Meadow") as MeshInstance3D
@@ -438,6 +456,7 @@ func _run_study_smoke() -> void:
 		push_error("Foam debug UI did not reopen with its camera framing.")
 		get_tree().quit(1)
 		return
+
 	var water_arrays := water_surface.mesh.surface_get_arrays(0)
 	var water_vertices: PackedVector3Array = water_arrays[Mesh.ARRAY_VERTEX]
 	var shoreline_coordinates: PackedVector2Array = water_arrays[Mesh.ARRAY_TEX_UV2]
@@ -471,68 +490,190 @@ func _run_study_smoke() -> void:
 		push_error("Water material is missing its baked shoreline length for foam source placement.")
 		get_tree().quit(1)
 		return
+
+	# One river, one mouth: the narrow channel enters through the centered south
+	# port and ends at the green lobe's upper soil boundary. It never reaches
+	# another tile edge, so the water genuinely feeds soil instead of dead-ending
+	# in empty meadow.
 	var water_bounds := water_surface.mesh.get_aabb()
-	if water_bounds.position.x > -2.44 or water_bounds.position.x + water_bounds.size.x < 2.44:
-		push_error("Baked river no longer reaches both centered east/west ports.")
+	if water_bounds.position.z + water_bounds.size.z < 2.44:
+		push_error("Baked river no longer reaches the centered south port.")
 		get_tree().quit(1)
 		return
-	if water_bounds.size.z < 2.7:
-		push_error("Baked river branches no longer reach both land regions.")
+	if water_bounds.position.z < -2.44 or water_bounds.position.x < -2.44 or water_bounds.position.x + water_bounds.size.x > 2.44:
+		push_error("The single channel spills past a land edge, so the tile no longer claims its three land edges.")
 		get_tree().quit(1)
 		return
-	var north_land := tile.get_node_or_null("LandSoil/NorthArcLand") as MeshInstance3D
-	var south_land := tile.get_node_or_null("LandSoil/SouthArcLand") as MeshInstance3D
-	if not _has_valid_low_soil_profile(north_land, "north") or not _has_valid_low_soil_profile(south_land, "south"):
+	if water_bounds.size.z > 2.0:
+		push_error("The river is no longer the one short straight channel required by the south port.")
 		get_tree().quit(1)
 		return
-	var north_bounds := north_land.mesh.get_aabb()
-	var south_bounds := south_land.mesh.get_aabb()
-	if north_bounds.position.x > -2.44 or north_bounds.position.x + north_bounds.size.x < 2.44 or north_bounds.position.z > -2.44:
-		push_error("North fertile land no longer reaches the full tile edge after the fence removal.")
+	if not _river_head_reaches_land(water_vertices):
 		get_tree().quit(1)
 		return
-	if south_bounds.position.x > -2.44 or south_bounds.position.x + south_bounds.size.x < 2.44 or south_bounds.position.z + south_bounds.size.z < 2.44:
-		push_error("South fertile land no longer reaches the full tile edge after the fence removal.")
+
+	var land := tile.get_node_or_null("LandSoil/ThreeEdgeLand") as MeshInstance3D
+	if not _has_valid_low_soil_profile(land):
 		get_tree().quit(1)
 		return
-	if tile.get_node_or_null("LandSoil/NorthArcHighlight") != null or tile.get_node_or_null("LandSoil/SouthArcHighlight") != null:
-		push_error("Fertile land still contains the retired central ridge highlight mesh.")
+	if not _land_covers_three_edges(land):
+		get_tree().quit(1)
+		return
+	if not _land_channels_reach_soil(land):
+		get_tree().quit(1)
+		return
+	if not _land_forms_one_connected_field(land):
+		get_tree().quit(1)
+		return
+	if not _land_preserves_reference_green_lobe(land, meadow):
 		get_tree().quit(1)
 		return
 
 	tile.set_growth_state(TileArtwork3D.GrowthState.BARE)
-	if tile.growing_plants.visible or tile.withered_plants.visible:
+	if tile.growing_plants.visible or tile.withered_plants.visible or not meadow.is_visible_in_tree():
 		push_error("Bare-soil state still shows a plant layer.")
 		get_tree().quit(1)
 		return
 	tile.set_growth_state(TileArtwork3D.GrowthState.GROWING)
-	if not tile.growing_plants.visible or tile.withered_plants.visible:
+	if not tile.growing_plants.visible or tile.withered_plants.visible or not meadow.is_visible_in_tree():
 		push_error("Growing state did not select the authored crop layer.")
 		get_tree().quit(1)
 		return
 	tile.set_growth_state(TileArtwork3D.GrowthState.WITHERED)
-	if tile.growing_plants.visible or not tile.withered_plants.visible:
+	if tile.growing_plants.visible or not tile.withered_plants.visible or not meadow.is_visible_in_tree():
 		push_error("Withered state did not select the authored wilted layer.")
 		get_tree().quit(1)
 		return
 
-	print("RIVER_CROSS_3D_SMOKE_PASS: fused river surface, live foam debug controls, low edge-connected fertile soil, edge ports, and three growth states are valid.")
+	print("THREE_LAND_RIVER_3D_SMOKE_PASS: one narrow south water tongue sits inside the broad rounded green lobe below a connected north-west-east soil U; fused river surface, live foam debug controls, and three growth states are valid.")
 	get_tree().quit()
 
 
-func _has_valid_low_soil_profile(land: MeshInstance3D, label: String) -> bool:
+func _has_valid_low_soil_profile(land: MeshInstance3D) -> bool:
 	if land == null or not land.mesh is ArrayMesh:
-		push_error("%s fertile land mesh is missing or no longer baked." % label)
+		push_error("Three-edge fertile land mesh is missing or no longer baked.")
 		return false
 	if not land.material_override is ShaderMaterial:
-		push_error("%s fertile land no longer uses the coherent stylized soil material." % label)
+		push_error("Three-edge fertile land no longer uses the coherent stylized soil material.")
+		return false
+	if not is_equal_approx(float(land.material_override.get_shader_parameter(&"moss_band_uv")), 1.0):
+		push_error("Three-edge fertile land lost its across-band moss coordinate.")
 		return false
 	var bounds := land.mesh.get_aabb()
-	if bounds.size.x < 4.89:
-		push_error("%s fertile land no longer preserves its full edge-connected width." % label)
+	if bounds.size.x < 4.89 or bounds.size.z < 4.89:
+		push_error("Three-edge fertile land no longer preserves its full edge-connected footprint.")
 		return false
 	var top_y := bounds.position.y + bounds.size.y
 	if bounds.size.y > 0.025 or bounds.position.y < 0.14 or top_y > 0.17:
-		push_error("%s fertile land no longer has a near-level low top profile." % label)
+		push_error("Three-edge fertile land no longer has a near-level low top profile.")
 		return false
 	return true
+
+
+# The claimed north, east and west edges must be covered end to end, while the
+# south edge stays open for the river mouth and green lobe.
+func _land_covers_three_edges(land: MeshInstance3D) -> bool:
+	var vertices: PackedVector3Array = land.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var samples := {
+		&"north": [Vector2(-2.40, -2.40), Vector2(0.0, -2.40), Vector2(2.40, -2.40)],
+		&"west": [Vector2(-2.40, -2.40), Vector2(-2.40, 0.0), Vector2(-2.40, 2.40)],
+		&"east": [Vector2(2.40, -2.40), Vector2(2.40, 0.0), Vector2(2.40, 2.40)],
+	}
+	for edge_name in samples:
+		for probe in samples[edge_name]:
+			if not _is_covered(vertices, probe):
+				push_error("Three-edge fertile land no longer covers the full %s edge at %s." % [edge_name, probe])
+				return false
+	if _is_covered(vertices, Vector2(0.0, 2.40)):
+		push_error("Three-edge fertile land now blocks the south river mouth.")
+		return false
+	return true
+
+
+# The short south channel head must touch the soil boundary without punching
+# through it, so the field stays continuous while the stream still irrigates it.
+func _land_channels_reach_soil(land: MeshInstance3D) -> bool:
+	var vertices: PackedVector3Array = land.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	if not _is_covered(vertices, LAND_INNER):
+		push_error("The soil U no longer reaches its curved border beside the south stream head.")
+		return false
+	return true
+
+
+func _land_forms_one_connected_field(land: MeshInstance3D) -> bool:
+	var vertices: PackedVector3Array = land.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	if not _is_covered(vertices, FIELD_CENTRE):
+		push_error("The three-edge field no longer owns its centre.")
+		return false
+	for edge_name in FIELD_EDGE_PROBES:
+		var edge_probe: Vector2 = FIELD_EDGE_PROBES[edge_name]
+		if not _is_covered(vertices, edge_probe):
+			push_error("The connected field no longer reaches its %s edge probe." % edge_name)
+			return false
+		if not _land_path_exists(vertices, FIELD_CENTRE, edge_probe):
+			push_error("The centre field cannot reach the %s edge without crossing meadow or water." % edge_name)
+			return false
+	return true
+
+
+func _land_preserves_reference_green_lobe(land: MeshInstance3D, meadow: MeshInstance3D) -> bool:
+	if meadow == null or not meadow.mesh is PlaneMesh:
+		push_error("The three-edge reference layout is missing its authored green meadow layer.")
+		return false
+	var vertices: PackedVector3Array = land.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	if _is_covered(vertices, MEADOW_LOBE_PROBE):
+		push_error("The connected soil filled the rounded green reference lobe.")
+		return false
+	return true
+
+
+func _land_path_exists(vertices: PackedVector3Array, start: Vector2, goal: Vector2) -> bool:
+	var start_cell := Vector2i(roundi(start.x / FIELD_CONNECTIVITY_STEP), roundi(start.y / FIELD_CONNECTIVITY_STEP))
+	var goal_cell := Vector2i(roundi(goal.x / FIELD_CONNECTIVITY_STEP), roundi(goal.y / FIELD_CONNECTIVITY_STEP))
+	var pending := [start_cell]
+	var visited := {start_cell: true}
+	var read_index := 0
+	while read_index < pending.size():
+		var current: Vector2i = pending[read_index]
+		read_index += 1
+		if current == goal_cell:
+			return true
+		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var next: Vector2i = current + direction
+			if visited.has(next):
+				continue
+			var point := Vector2(next.x, next.y) * FIELD_CONNECTIVITY_STEP
+			if absf(point.x) > 2.40 or absf(point.y) > 2.40 or not _is_covered(vertices, point):
+				continue
+			visited[next] = true
+			pending.append(next)
+	return false
+
+
+func _river_head_reaches_land(water_vertices: PackedVector3Array) -> bool:
+	if not _is_covered(water_vertices, RIVER_HEAD):
+		push_error("The narrow water tongue no longer reaches the green lobe's inner soil boundary.")
+		return false
+	if _is_covered(water_vertices, LAND_INNER):
+		push_error("The water tongue punches through the connected soil U.")
+		return false
+	return true
+
+
+func _is_covered(vertices: PackedVector3Array, probe: Vector2) -> bool:
+	for triangle in range(0, vertices.size(), 3):
+		var a := Vector2(vertices[triangle].x, vertices[triangle].z)
+		var b := Vector2(vertices[triangle + 1].x, vertices[triangle + 1].z)
+		var c := Vector2(vertices[triangle + 2].x, vertices[triangle + 2].z)
+		if _point_in_triangle(probe, a, b, c):
+			return true
+	return false
+
+
+func _point_in_triangle(p: Vector2, a: Vector2, b: Vector2, c: Vector2) -> bool:
+	var d1 := (p - b).cross(c - b)
+	var d2 := (p - c).cross(a - c)
+	var d3 := (p - a).cross(b - a)
+	var has_neg := d1 < 0.0 or d2 < 0.0 or d3 < 0.0
+	var has_pos := d1 > 0.0 or d2 > 0.0 or d3 > 0.0
+	return not (has_neg and has_pos)

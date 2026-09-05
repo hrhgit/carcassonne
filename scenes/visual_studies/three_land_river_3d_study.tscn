@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3]
 
-[ext_resource type="Script" path="res://scripts/river_cross_3d_study.gd" id="1_study"]
-[ext_resource type="PackedScene" path="res://scenes/tiles_3d/river_cross_3d.tscn" id="2_tile"]
+[ext_resource type="Script" path="res://scripts/three_land_river_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/three_land_river_3d.tscn" id="2_tile"]
 
 [sub_resource type="Environment" id="EnvironmentStudy"]
 background_mode = 1
@@ -71,7 +71,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="RiverCross3DStudy" type="Node3D"]
+[node name="ThreeLandRiver3DStudy" type="Node3D"]
 script = ExtResource("1_study")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -89,7 +89,7 @@ shadow_opacity = 0.86
 position = Vector3(0, -0.5, 0)
 mesh = SubResource("MeshTable")
 
-[node name="RiverCross3D" parent="." instance=ExtResource("2_tile")]
+[node name="ThreeLandRiver3D" parent="." instance=ExtResource("2_tile")]
 
 [node name="Camera3D" type="Camera3D" parent="."]
 current = true
@@ -114,7 +114,7 @@ offset_right = 458.0
 offset_bottom = 49.0
 theme_override_colors/font_color = Color(0.12, 0.32, 0.22, 1)
 theme_override_font_sizes/font_size = 24
-text = "RIVER CROSS · FRESH 3D"
+text = "THREE LAND RIVER · FRESH 3D"
 
 [node name="Subtitle" type="Label" parent="UI/InfoPanel"]
 offset_left = 23.0
@@ -123,7 +123,7 @@ offset_right = 458.0
 offset_bottom = 83.0
 theme_override_colors/font_color = Color(0.24, 0.48, 0.35, 1)
 theme_override_font_sizes/font_size = 14
-text = "清新原木托盘 · 肥沃起垄梯田 · 晶莹碧水溪流"
+text = "三边沃野 · 单口引水 · 晶莹碧水溪流"
 
 [node name="MeshNote" type="Label" parent="UI/InfoPanel"]
 offset_left = 23.0
@@ -132,7 +132,7 @@ offset_right = 458.0
 offset_bottom = 108.0
 theme_override_colors/font_color = Color(0.38, 0.58, 0.45, 1)
 theme_override_font_sizes/font_size = 12
-text = "微缩引水小闸 · 复合蔬菜金麦 · 日光桌面微缩"
+text = "微缩引水小闸 · 三向灌溉支流 · 日光桌面微缩"
 
 [node name="AngleBadge" type="Panel" parent="UI"]
 offset_left = 930.0
@@ -245,6 +245,7 @@ offset_bottom = 777.0
 theme_override_colors/font_color = Color(0.18, 0.38, 0.24, 0.95)
 theme_override_font_sizes/font_size = 14
 text = "生长状态：生长"
+horizontal_alignment = 0
 
 [node name="Controls" type="Label" parent="UI"]
 offset_left = 770.0

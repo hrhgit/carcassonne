@@ -1,43 +1,22 @@
 extends SceneTree
 
 const OUTPUT_DIRECTORY := "res://art/generated"
-const BANK_OUTPUT := OUTPUT_DIRECTORY + "/river_cross_bank_mesh.tres"
-const WATER_OUTPUT := OUTPUT_DIRECTORY + "/river_cross_water_mesh.tres"
-# A denser fixed mesh keeps the baked shoreline-distance field accurate around
-# the two concave branch junctions instead of interpolating broad triangular bands.
+const BANK_OUTPUT := OUTPUT_DIRECTORY + "/three_land_river_bank_mesh.tres"
+const WATER_OUTPUT := OUTPUT_DIRECTORY + "/three_land_river_water_mesh.tres"
+# A denser fixed mesh keeps the baked shoreline-distance field accurate along
+# the short channel rather than interpolating broad triangular bands.
 const SURFACE_SUBDIVISIONS := 3
 
-# East/west ports remain exactly centered and straight at the tile boundary.
-# The inner points are intentionally asymmetric so the water reads as a river,
-# not as four primitive boxes intersecting in the middle.
+# One river, one mouth. The water stays a narrow straight tongue inside the
+# south-side green lobe, so the reference layout keeps its broad soil U-shape.
+# It enters exactly through the bottom-edge centre and stops against the
+# meadow's inner soil boundary, visibly irrigating the connected field.
 const MAIN_RIVER := [
-	Vector2(-2.45, 0.0),
-	Vector2(-2.08, 0.0),
-	Vector2(-1.68, -0.12),
-	Vector2(-1.18, -0.29),
-	Vector2(-0.67, -0.31),
-	Vector2(-0.18, -0.12),
-	Vector2(0.31, 0.16),
-	Vector2(0.86, 0.31),
-	Vector2(1.42, 0.24),
-	Vector2(1.95, 0.06),
-	Vector2(2.45, 0.0),
-]
-
-const NORTH_IRRIGATION_BRANCH := [
-	Vector2(-0.18, -0.12),
-	Vector2(-0.27, -0.43),
-	Vector2(-0.19, -0.76),
-	Vector2(0.03, -1.08),
-	Vector2(0.1, -1.42),
-]
-
-const SOUTH_IRRIGATION_BRANCH := [
-	Vector2(0.31, 0.16),
-	Vector2(0.44, 0.45),
-	Vector2(0.4, 0.76),
-	Vector2(0.2, 1.08),
-	Vector2(0.13, 1.42),
+	Vector2(0.0, 2.45),
+	# The first two points stay collinear so the ribbon cap stays exactly on the
+	# tile boundary instead of drifting sideways with the first tangent.
+	Vector2(0.0, 2.02),
+	Vector2(0.0, 1.57),
 ]
 
 
@@ -53,10 +32,10 @@ func _build_resources() -> void:
 		quit(1)
 		return
 
-	var bank_mesh := _build_combined_ribbons(0.76, 0.68)
-	var water_mesh := _build_combined_ribbons(0.48, 0.38)
+	var bank_mesh := _build_river_mesh(0.76)
+	var water_mesh := _build_river_mesh(0.48)
 	if bank_mesh.get_surface_count() == 0 or water_mesh.get_surface_count() == 0:
-		push_error("Unable to build fused river meshes.")
+		push_error("Unable to build the single-channel river meshes.")
 		quit(1)
 		return
 	var bank_error := ResourceSaver.save(bank_mesh, BANK_OUTPUT)
@@ -69,8 +48,8 @@ func _build_resources() -> void:
 		quit(1)
 		return
 
-	var water_outline := _build_merged_outline(0.48, 0.38)
-	print("RIVER_CROSS_RIBBONS_BUILT: %s and %s | water_shoreline_length=%.5f" % [
+	var water_outline := _build_river_outline(0.48)
+	print("THREE_LAND_RIVER_RIBBONS_BUILT: %s and %s | water_shoreline_length=%.5f" % [
 		BANK_OUTPUT,
 		WATER_OUTPUT,
 		_outline_length(water_outline),
@@ -78,18 +57,18 @@ func _build_resources() -> void:
 	quit()
 
 
-func _build_combined_ribbons(main_width: float, branch_width: float) -> ArrayMesh:
-	var outline := _build_merged_outline(main_width, branch_width)
+func _build_river_mesh(width: float) -> ArrayMesh:
+	var outline := _build_river_outline(width)
 	if outline.size() < 3:
 		return ArrayMesh.new()
 	var shoreline_length := _outline_length(outline)
 	if shoreline_length <= 0.0:
-		push_error("The fused river outline has no measurable shoreline length.")
+		push_error("The river outline has no measurable shoreline length.")
 		return ArrayMesh.new()
 
 	var triangle_indices := Geometry2D.triangulate_polygon(outline)
 	if triangle_indices.is_empty():
-		push_error("Unable to triangulate the fused river outline.")
+		push_error("Unable to triangulate the river outline.")
 		return ArrayMesh.new()
 
 	var surface_tool := SurfaceTool.new()
@@ -102,22 +81,14 @@ func _build_combined_ribbons(main_width: float, branch_width: float) -> ArrayMes
 			outline[triangle_indices[triangle_index + 2]],
 			outline,
 			shoreline_length,
-			main_width,
-			branch_width,
+			width,
 			SURFACE_SUBDIVISIONS,
 		)
 	return surface_tool.commit()
 
 
-func _build_merged_outline(main_width: float, branch_width: float) -> PackedVector2Array:
-	var outline := _build_ribbon_outline(MAIN_RIVER, main_width)
-	for branch in [NORTH_IRRIGATION_BRANCH, SOUTH_IRRIGATION_BRANCH]:
-		var merged := Geometry2D.merge_polygons(outline, _build_ribbon_outline(branch, branch_width))
-		if merged.size() != 1:
-			push_error("A river branch did not merge into one continuous outline.")
-			return PackedVector2Array()
-		outline = merged[0]
-	return outline
+func _build_river_outline(width: float) -> PackedVector2Array:
+	return _build_ribbon_outline(MAIN_RIVER, width)
 
 
 func _build_ribbon_outline(points: Array, width: float) -> PackedVector2Array:
@@ -144,8 +115,7 @@ func _append_subdivided_triangle(
 	c: Vector2,
 	outline: PackedVector2Array,
 	shoreline_length: float,
-	main_width: float,
-	branch_width: float,
+	width: float,
 	remaining_subdivisions: int,
 ) -> void:
 	if remaining_subdivisions > 0:
@@ -153,15 +123,15 @@ func _append_subdivided_triangle(
 		var bc := (b + c) * 0.5
 		var ca := (c + a) * 0.5
 		var next_subdivisions := remaining_subdivisions - 1
-		_append_subdivided_triangle(surface_tool, a, ab, ca, outline, shoreline_length, main_width, branch_width, next_subdivisions)
-		_append_subdivided_triangle(surface_tool, ab, b, bc, outline, shoreline_length, main_width, branch_width, next_subdivisions)
-		_append_subdivided_triangle(surface_tool, ca, bc, c, outline, shoreline_length, main_width, branch_width, next_subdivisions)
-		_append_subdivided_triangle(surface_tool, ab, bc, ca, outline, shoreline_length, main_width, branch_width, next_subdivisions)
+		_append_subdivided_triangle(surface_tool, a, ab, ca, outline, shoreline_length, width, next_subdivisions)
+		_append_subdivided_triangle(surface_tool, ab, b, bc, outline, shoreline_length, width, next_subdivisions)
+		_append_subdivided_triangle(surface_tool, ca, bc, c, outline, shoreline_length, width, next_subdivisions)
+		_append_subdivided_triangle(surface_tool, ab, bc, ca, outline, shoreline_length, width, next_subdivisions)
 		return
 
-	_add_surface_vertex(surface_tool, a, outline, shoreline_length, main_width, branch_width)
-	_add_surface_vertex(surface_tool, b, outline, shoreline_length, main_width, branch_width)
-	_add_surface_vertex(surface_tool, c, outline, shoreline_length, main_width, branch_width)
+	_add_surface_vertex(surface_tool, a, outline, shoreline_length, width)
+	_add_surface_vertex(surface_tool, b, outline, shoreline_length, width)
+	_add_surface_vertex(surface_tool, c, outline, shoreline_length, width)
 
 
 func _point_tangent(points: Array, point_index: int) -> Vector2:
@@ -177,12 +147,11 @@ func _add_surface_vertex(
 	point: Vector2,
 	outline: PackedVector2Array,
 	shoreline_length: float,
-	main_width: float,
-	branch_width: float,
+	width: float,
 ) -> void:
 	surface_tool.set_normal(Vector3.UP)
-	surface_tool.set_uv(_flow_uv(point, main_width, branch_width))
-	# UV2 stores a local shoreline coordinate system baked from the final union
+	surface_tool.set_uv(_flow_uv(point, width))
+	# UV2 stores a local shoreline coordinate system baked from the final
 	# outline: X is distance inward from the bank, Y is normalized arc length.
 	# The water shader can therefore derive both the white line and foam births
 	# from one shoreline wave field without reconstructing tile geometry.
@@ -191,36 +160,33 @@ func _add_surface_vertex(
 	surface_tool.add_vertex(Vector3(point.x, 0.0, point.y))
 
 
-func _flow_uv(point: Vector2, main_width: float, branch_width: float) -> Vector2:
-	var paths := [MAIN_RIVER, NORTH_IRRIGATION_BRANCH, SOUTH_IRRIGATION_BRANCH]
-	var widths := [main_width, branch_width, branch_width]
+func _flow_uv(point: Vector2, width: float) -> Vector2:
+	var total_length := _path_length(MAIN_RIVER)
+	var distance_along := 0.0
 	var best_distance_squared := INF
 	var best_uv := Vector2.ZERO
 
-	for path_index in range(paths.size()):
-		var path: Array = paths[path_index]
-		var total_length := _path_length(path)
-		var distance_along := 0.0
-		for segment_index in range(path.size() - 1):
-			var segment: Vector2 = path[segment_index + 1] - path[segment_index]
-			var segment_length := segment.length()
-			var tangent := segment / segment_length
-			var projected_length := clampf(
-				(point - path[segment_index]).dot(tangent),
-				0.0,
-				segment_length,
+	for segment_index in range(MAIN_RIVER.size() - 1):
+		var start: Vector2 = MAIN_RIVER[segment_index]
+		var segment: Vector2 = MAIN_RIVER[segment_index + 1] - start
+		var segment_length := segment.length()
+		var tangent := segment / segment_length
+		var projected_length := clampf(
+			(point - start).dot(tangent),
+			0.0,
+			segment_length,
+		)
+		var projected_point: Vector2 = start + tangent * projected_length
+		var offset := point - projected_point
+		var distance_squared := offset.length_squared()
+		if distance_squared < best_distance_squared:
+			var perpendicular := Vector2(-tangent.y, tangent.x)
+			best_distance_squared = distance_squared
+			best_uv = Vector2(
+				(distance_along + projected_length) / total_length,
+				clampf(0.5 + offset.dot(perpendicular) / width, 0.0, 1.0),
 			)
-			var projected_point: Vector2 = path[segment_index] + tangent * projected_length
-			var offset := point - projected_point
-			var distance_squared := offset.length_squared()
-			if distance_squared < best_distance_squared:
-				var perpendicular := Vector2(-tangent.y, tangent.x)
-				best_distance_squared = distance_squared
-				best_uv = Vector2(
-					(distance_along + projected_length) / total_length,
-					clampf(0.5 + offset.dot(perpendicular) / float(widths[path_index]), 0.0, 1.0),
-				)
-			distance_along += segment_length
+		distance_along += segment_length
 	return best_uv
 
 
