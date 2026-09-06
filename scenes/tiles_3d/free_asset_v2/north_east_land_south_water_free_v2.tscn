@@ -248,7 +248,7 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_fm7xg")
 
-[node name="NorthEastLandSouthWaterFreeAssetV2" type="Node3D" unique_id=1233086825]
+[node name="NorthEastLandSouthWaterFreeAssetV2" type="Node3D" unique_id=315196654]
 script = ExtResource("1_nhmyi")
 edge_markers = PackedInt32Array(1, 1, 2, 0)
 topology = ExtResource("2_4mlvv")
@@ -257,75 +257,75 @@ require_canonical_topology = true
 preview_growth_state = 0
 planting_masks = Array[ExtResource("3_kfb2b")]([ExtResource("4_5avdn")])
 
-[node name="Base" type="MeshInstance3D" parent="." unique_id=1740398303]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1550439628]
 material_override = ExtResource("5_kx2y2")
 mesh = ExtResource("6_3hkgc")
 
-[node name="Meadow" type="MeshInstance3D" parent="." unique_id=669789087]
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1985932297]
 material_override = ExtResource("7_hocw4")
 mesh = ExtResource("8_5p0ev")
 
-[node name="LandSoil" type="Node3D" parent="." unique_id=47309938]
+[node name="LandSoil" type="Node3D" parent="." unique_id=1012773140]
 
-[node name="NorthEastField" type="MeshInstance3D" parent="LandSoil" unique_id=903802325]
+[node name="NorthEastField" type="MeshInstance3D" parent="LandSoil" unique_id=1841217074]
 material_override = ExtResource("9_nyfhf")
 mesh = ExtResource("10_3kotu")
 
-[node name="Water" type="Node3D" parent="." unique_id=351210721]
+[node name="Water" type="Node3D" parent="." unique_id=1175582846]
 
-[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=541727644]
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=1814541983]
 material_override = ExtResource("11_3a7fw")
 mesh = ExtResource("12_wfdhh")
 
-[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=500688759]
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=1379558895]
 material_override = ExtResource("13_wyy7d")
 cast_shadow = 0
 mesh = ExtResource("14_ju53c")
 
-[node name="Decorations" type="Node3D" parent="." unique_id=808228001]
+[node name="Decorations" type="Node3D" parent="." unique_id=1052037966]
 
-[node name="MeadowGrassA" type="Node3D" parent="Decorations" unique_id=1721817718]
+[node name="MeadowGrassA" type="Node3D" parent="Decorations" unique_id=374953087]
 transform = Transform3D(0.43748602, 0, -0.14214782, 0, 0.46, 0, 0.14214782, 0, 0.43748602, -1.72, 0.145, 0.42)
 
-[node name="MeadowGrassAMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassA" unique_id=1067605059]
+[node name="MeadowGrassAMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassA" unique_id=588252306]
 material_override = ExtResource("15_nxhlf")
 mesh = SubResource("ArrayMesh_kxnv3")
 
-[node name="MeadowGrassB" type="Node3D" parent="Decorations" unique_id=171884726]
+[node name="MeadowGrassB" type="Node3D" parent="Decorations" unique_id=1642092888]
 transform = Transform3D(0.30858025, 0, 0.18541372, 0, 0.36, 0, -0.18541372, 0, 0.30858025, -1.49, 0.145, 0.57)
 
-[node name="MeadowGrassBMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassB" unique_id=978111300]
+[node name="MeadowGrassBMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassB" unique_id=391507053]
 material_override = ExtResource("15_nxhlf")
 mesh = SubResource("ArrayMesh_iyrdf")
 
-[node name="MeadowRockA" type="Node3D" parent="Decorations" unique_id=1354166012]
+[node name="MeadowRockA" type="Node3D" parent="Decorations" unique_id=1182709500]
 transform = Transform3D(0.22956637, 0, -0.1220626, 0, 0.26, 0, 0.1220626, 0, 0.22956637, -1.82, 0.145, 0.78)
 
-[node name="MeadowRockAMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockA" unique_id=766513439]
+[node name="MeadowRockAMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockA" unique_id=440045980]
 material_override = ExtResource("17_a6gk5")
 mesh = SubResource("ArrayMesh_0x3mm")
 
-[node name="MeadowGrassC" type="Node3D" parent="Decorations" unique_id=2094987813]
+[node name="MeadowGrassC" type="Node3D" parent="Decorations" unique_id=468669430]
 transform = Transform3D(0.3061834, 0, 0.04849469, 0, 0.31, 0, -0.04849469, 0, 0.3061834, -0.92, 0.145, 1.7)
 
-[node name="MeadowGrassCMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassC" unique_id=1108803742]
+[node name="MeadowGrassCMesh01" type="MeshInstance3D" parent="Decorations/MeadowGrassC" unique_id=1275380003]
 material_override = ExtResource("15_nxhlf")
 mesh = SubResource("ArrayMesh_3gmcu")
 
-[node name="MeadowRockB" type="Node3D" parent="Decorations" unique_id=1559476691]
+[node name="MeadowRockB" type="Node3D" parent="Decorations" unique_id=1038079921]
 transform = Transform3D(0.40895432, 0, 0.13287732, 0, 0.43, 0, -0.13287732, 0, 0.40895432, -1.14, 0.145, 1.58)
 
-[node name="MeadowRockBMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockB" unique_id=1501984037]
+[node name="MeadowRockBMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockB" unique_id=34487464]
 material_override = ExtResource("17_a6gk5")
 mesh = SubResource("ArrayMesh_2y6w1")
 
-[node name="MeadowRockC" type="Node3D" parent="Decorations" unique_id=2107967228]
+[node name="MeadowRockC" type="Node3D" parent="Decorations" unique_id=1015490222]
 transform = Transform3D(0.09351417, 0, 0.09030559, 0, 0.13, 0, -0.09030559, 0, 0.09351417, -1.24, 0.145, 1.82)
 
-[node name="MeadowRockCMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockC" unique_id=1874673959]
+[node name="MeadowRockCMesh01" type="MeshInstance3D" parent="Decorations/MeadowRockC" unique_id=777492803]
 material_override = ExtResource("17_a6gk5")
 mesh = SubResource("ArrayMesh_5tkxr")
 
-[node name="GrowingPlants" type="Node3D" parent="." unique_id=669408017]
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=356978191]
 
-[node name="WitheredPlants" type="Node3D" parent="." unique_id=1050714456]
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=946560893]

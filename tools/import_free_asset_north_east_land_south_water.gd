@@ -138,7 +138,7 @@ func _load_manifest() -> Dictionary:
 		_fail("Could not open Blender manifest.")
 		return {}
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary or float(parsed.get("water_port_width", 0.0)) != WATER_PORT_HALF_WIDTH * 2.0 or float(parsed.get("shoreline_length", 0.0)) <= 0.0 or not parsed.has("planting_boundary") or parsed.get("geometry_language", "") != "convex LAND polygon and polyline WATER bands":
+	if not parsed is Dictionary or float(parsed.get("water_port_width", 0.0)) != WATER_PORT_HALF_WIDTH * 2.0 or float(parsed.get("shoreline_length", 0.0)) <= 0.0 or float(parsed.get("land_slope_outset", 0.0)) < 0.20 or not parsed.has("planting_boundary") or parsed.get("geometry_language", "") != "convex LAND polygon and polyline WATER bands":
 		_fail("Blender manifest lost the canonical water width or shoreline length.")
 		return {}
 	return parsed
@@ -187,9 +187,11 @@ func _save_terrain_materials() -> bool:
 	var soil := ShaderMaterial.new()
 	soil.resource_name = "Free V2 Fertile Soil"
 	soil.shader = V2_SOIL_SHADER
-	soil.set_shader_parameter("fertile_earth", Color(0.29, 0.18, 0.105, 1.0))
-	soil.set_shader_parameter("cool_earth", Color(0.20, 0.145, 0.095, 1.0))
-	soil.set_shader_parameter("furrow_strength", 0.16)
+	soil.set_shader_parameter("dark_earth", Color(0.275, 0.168, 0.098, 1.0))
+	soil.set_shader_parameter("middle_earth", Color(0.285, 0.175, 0.103, 1.0))
+	soil.set_shader_parameter("light_earth", Color(0.295, 0.182, 0.108, 1.0))
+	soil.set_shader_parameter("face_contrast", 0.015)
+	soil.set_shader_parameter("slope_shadow", 0.10)
 	var bank := BANK_MATERIAL.duplicate(true) as StandardMaterial3D
 	bank.resource_name = "Free V2 River Bank"
 	bank.albedo_color = Color(0.30, 0.29, 0.235, 1.0)
@@ -221,12 +223,61 @@ func _validate_edge_contract(meshes: Dictionary) -> bool:
 	var land := meshes["NorthEastField"] as ArrayMesh
 	var water := meshes["AnimatedSurface"] as ArrayMesh
 	var meadow_vertices: PackedVector3Array = meadow.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-	var land_vertices: PackedVector3Array = land.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var land_arrays := land.surface_get_arrays(0)
+	var land_vertices: PackedVector3Array = land_arrays[Mesh.ARRAY_VERTEX]
+	var land_uv: PackedVector2Array = land_arrays[Mesh.ARRAY_TEX_UV]
+	var land_indices: PackedInt32Array = land_arrays[Mesh.ARRAY_INDEX] if land_arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var land_triangles := land_indices if not land_indices.is_empty() else PackedInt32Array(range(land_vertices.size()))
 	var water_arrays := water.surface_get_arrays(0)
 	var water_vertices: PackedVector3Array = water_arrays[Mesh.ARRAY_VERTEX]
 	var water_uv2: PackedVector2Array = water_arrays[Mesh.ARRAY_TEX_UV2]
 	if water_uv2.size() != water_vertices.size() or water_uv2.is_empty():
 		_fail("Blender water mesh did not preserve its second UV channel for d/s.")
+		return false
+	if land_uv.size() != land_vertices.size() or land_uv.is_empty():
+		_fail("Blender LAND did not preserve its palette UV channel.")
+		return false
+	var top_tones := {}
+	var slope_tones := {}
+	for index in range(0, land_triangles.size(), 3):
+		var a_index := land_triangles[index]
+		var b_index := land_triangles[index + 1]
+		var c_index := land_triangles[index + 2]
+		var a := land_vertices[a_index]
+		var b := land_vertices[b_index]
+		var c := land_vertices[c_index]
+		var normal := (b - a).cross(c - a)
+		if normal.length_squared() <= POSITION_EPSILON * POSITION_EPSILON:
+			continue
+		var is_top := (
+			absf(a.y - 0.190) <= POSITION_EPSILON
+			and absf(b.y - 0.190) <= POSITION_EPSILON
+			and absf(c.y - 0.190) <= POSITION_EPSILON
+		)
+		for vertex_index in [a_index, b_index, c_index]:
+			if is_top:
+				if absf(normal.normalized().y) < 0.98:
+					_fail("Blender LAND top triangle is not a flat horizontal surface.")
+					return false
+				if absf(land_vertices[vertex_index].y - 0.190) > POSITION_EPSILON:
+					_fail("Blender LAND top triangle left the fixed planting height.")
+					return false
+				top_tones[int(roundf(land_uv[vertex_index].x * 100.0))] = true
+			else:
+				slope_tones[int(roundf(land_uv[vertex_index].x * 100.0))] = true
+	if top_tones.size() != 1:
+		_fail("Blender LAND top must use one uniform palette tone: %s" % [top_tones.keys()])
+		return false
+	if slope_tones.size() < 4:
+		_fail("Blender LAND outer slope lost its faceted palette variation: %s" % [slope_tones.keys()])
+		return false
+	var water_reaches_land := false
+	for vertex in water_vertices:
+		if vertex.y > 0.190 and vertex.z < 0.90:
+			water_reaches_land = true
+			break
+	if not water_reaches_land:
+		_fail("The polygonal WATER tongue does not visibly rise onto the LAND contact.")
 		return false
 	for vertex in meadow_vertices:
 		if is_equal_approx(absf(vertex.x), TILE_HALF_SIZE) or is_equal_approx(absf(vertex.z), TILE_HALF_SIZE):
@@ -348,7 +399,7 @@ func _add_decoration(parent: Node, scene_owner: Node, packed: PackedScene, name:
 func _is_covered(mesh: ArrayMesh, probe: Vector2) -> bool:
 	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
 	for index in range(0, triangle_indices.size(), 3):
 		var a := vertices[triangle_indices[index]]

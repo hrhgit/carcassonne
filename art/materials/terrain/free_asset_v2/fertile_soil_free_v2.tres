@@ -6,7 +6,9 @@
 resource_name = "Free V2 Fertile Soil"
 render_priority = 0
 shader = ExtResource("1_pwmi4")
-shader_parameter/fertile_earth = Color(0.29, 0.18, 0.105, 1)
-shader_parameter/cool_earth = Color(0.2, 0.145, 0.095, 1)
-shader_parameter/furrow_strength = 0.16
+shader_parameter/dark_earth = Color(0.275, 0.168, 0.098, 1)
+shader_parameter/middle_earth = Color(0.285, 0.175, 0.103, 1)
+shader_parameter/light_earth = Color(0.295, 0.182, 0.108, 1)
+shader_parameter/face_contrast = 0.015
+shader_parameter/slope_shadow = 0.1
 shader_parameter/roughness = null

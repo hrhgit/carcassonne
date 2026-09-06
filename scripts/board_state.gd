@@ -12,7 +12,7 @@ var phase: int = Phase.DEAL
 var active_player: int = 0
 var turn_number: int = 1
 var tile_to_place = null                       # 抽到待放的 TileDefinition 或 null
-var turn_placed_cells: Array[Vector2i] = []    # 本回合已放置（仅用于流程/视觉，不限制种植目标）
+var turn_placed_cells: Array[Vector2i] = []    # 当前玩家本回合已放置：主动种植的唯一候选
 var planting_action_used := false               # §7.2.2：每回合至多主动种植一次
 
 # BoardState is the rule authority for tile placement. Visual nodes only read
@@ -118,7 +118,7 @@ func run_end_game(plant_engine_script) -> Dictionary:
 	return {"valid": true, "reason": "终局已结算。", "plant_analysis": pa, "score_result": sc, "winner": w}
 
 
-# 本回合刚放置的格列表（供流程/视觉使用；r16 起不限制主动种植目标）
+# 本回合当前玩家刚放置的格列表（供主动种植、流程与视觉使用）。
 func is_turn_placed(cell: Vector2i) -> bool:
 	for c in turn_placed_cells:
 		if c == cell:
@@ -287,18 +287,23 @@ func tile_has_species(tile: Vector2i, species: int) -> bool:
 	return false
 
 # §5.8 / §7.2.2.A 种植合法性前置检查：
-#   1. 只能在本回合"放置完成"后的动作窗口主动种植；
-#   2. 目标可以是棋盘上任意历史地块，不限本回合新牌；
+#   1. 只能在本回合"放置完成"后的动作窗口由当前玩家主动种植；
+#   2. 目标必须是该玩家本回合刚放置的地块；
 #   3. 目标必须含可种植 LAND，且整格没有任何植物；
 #   4. 当前玩家必须还有所选物种种子；
 #   5. 每回合最多一次主动种植。
 func can_plant_at(target_cell: Vector2i, species: int, owner: int) -> Dictionary:
 	if phase != Phase.ACTION_WINDOW:
 		return _verdict(false, "请先完成本回合的地块放置，再种植。")
-	if planting_action_used:
-		return _verdict(false, "本回合已经种植过；可结束回合。")
+	if owner != active_player:
+		return _verdict(false, "只能由当前回合玩家主动种植。")
 	if not has_tile(target_cell):
 		return _verdict(false, "目标格尚未放置地块。")
+	var placement := get_placement(target_cell)
+	if not is_turn_placed(target_cell) or int(placement.get("owner_id", -1)) != owner:
+		return _verdict(false, "本回合只能在自己刚放置的地块种植。")
+	if planting_action_used:
+		return _verdict(false, "本回合已经种植过；可结束回合。")
 	if land_regions_at(target_cell).is_empty():
 		return _verdict(false, "目标格不属于任何土地块（无可种植空间）。")
 	if tile_has_any_plant(target_cell):
@@ -338,10 +343,15 @@ func plant(target_cell: Vector2i, species: int, owner: int) -> Dictionary:
 		p.land_region_id = int(regions[0].id)
 	plants[p.id] = p
 	planting_action_used = true
+	# 主动种植和放置新地块是自动扩张的两个唯一触发时机。这里仅以
+	# 本次种下的植物为源，向其直接相邻且真正 LAND 连通的既有地块扩张；
+	# 不把刚生成的扩张株再次作为源，避免一次种植递归填满整片地图。
+	var automatic_expansions := _expand_plant_to_direct_land_neighbours(p)
 	return {
 		"valid": true,
 		"reason": "已种植",
 		"plant_id": p.id,
+		"automatic_expansions": automatic_expansions,
 		"species_conflict": _resolve_species_conflicts(),
 	}
 
@@ -370,6 +380,34 @@ func _apply_automatic_expansion(target_cell: Vector2i) -> Dictionary:
 		return int(a.id) < int(b.id)
 	)
 	var source: Plant = candidates[0]
+	return _create_automatic_expansion(source, target_cell)
+
+
+# 主动种植后的自动扩张：只检查源植物所在格的四个直接邻居。
+# 这使“种植时扩张”与“新地块紧邻已有植物时扩张”共用同一 LAND 连通判定，
+# 同时严格保持一跳传播，避免在一个事件里递归扩张。
+func _expand_plant_to_direct_land_neighbours(source: Plant) -> Array:
+	var expansions: Array = []
+	if source == null:
+		return expansions
+	for edge in range(4):
+		if not _direct_land_connection_at(source.tile_cell, edge):
+			continue
+		var target_cell := neighbour_for_edge(source.tile_cell, edge)
+		if tile_has_any_plant(target_cell):
+			continue
+		var expansion := _create_automatic_expansion(source, target_cell)
+		if not expansion.is_empty():
+			expansions.append(expansion)
+	return expansions
+
+
+# 两个扩张触发器共用的无种子克隆步骤。调用方已经确认 target_cell
+# 是直接 LAND 连通的空地块；这里仍保留基础防护，避免测试或未来调用方
+# 绕过该契约后覆盖已有植物。
+func _create_automatic_expansion(source: Plant, target_cell: Vector2i) -> Dictionary:
+	if source == null or not has_tile(target_cell) or tile_has_any_plant(target_cell):
+		return {}
 	var expanded := Plant.new()
 	expanded.id = next_plant_id
 	next_plant_id += 1
@@ -389,6 +427,7 @@ func _apply_automatic_expansion(target_cell: Vector2i) -> Dictionary:
 		"source_plant_id": int(source.id),
 		"owner": int(source.owner),
 		"species": int(source.species),
+		"target_cell": target_cell,
 	}
 
 

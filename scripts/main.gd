@@ -10,11 +10,14 @@ const WATER_NETWORK_RENDERER_SCRIPT := preload("res://scripts/water_network_rend
 const GAME_SMOKE_ARGUMENT := "--game-smoke"
 const CAPTURE_ARGUMENT := "--capture-game"
 const PLANTING_CAPTURE_ARGUMENT := "--capture-planting"
+const PLANTING_INPUT_SMOKE_ARGUMENT := "--planting-input-smoke"
 
 # One grid cell spans one fixed 3D tile (4.9 world units). NORTH faces -Z,
 # EAST +X, SOUTH +Z, WEST -X, matching the authored prefab edge order.
 const TILE_SIZE := 4.9
 const HIGHLIGHT_Y := 0.17
+const LAND_OUTLINE_HEIGHT_OFFSET := 0.045
+const LAND_OUTLINE_WIDTH := 3.0
 
 const PLAYER_COLORS := [Color("#7ecf91"), Color("#ed9b70")]
 
@@ -55,7 +58,13 @@ var current_rotation := 0
 var placed_tile_nodes: Dictionary = {}   # cell -> Node3D (prefab instance)
 var preview_node: Node3D = null
 var hover_highlight: MeshInstance3D = null
-var land_outline_nodes: Array[Node3D] = []
+var land_outline_canvas: CanvasLayer = null
+var land_outline_mask_viewport: SubViewport = null
+var land_outline_mask_root: Node2D = null
+var land_outline_texture_rect: TextureRect = null
+var land_outline_world_polygons: Array = []
+var land_outline_color := Color(0.0, 0.0, 0.0, 0.0)
+var land_outline_viewport_size := Vector2.ZERO
 var land_outline_signature := ""
 
 var has_hovered_cell := false
@@ -76,6 +85,7 @@ var menu_species_targets: Array = []
 var game_over_result: Dictionary = {}
 
 # HUD 控件引用
+var ui_layer: CanvasLayer
 var label_title: Label
 var label_status: Label
 var label_current_tile: Label
@@ -101,6 +111,7 @@ func _ready() -> void:
 	camera.size = CAMERA_ORTHO_SIZE
 	_build_highlight_quad()
 	_build_hud()
+	_build_land_outline_overlay()
 	_update_camera()
 
 	_start_new_game()
@@ -108,6 +119,8 @@ func _ready() -> void:
 	var user_arguments := OS.get_cmdline_user_args()
 	if GAME_SMOKE_ARGUMENT in user_arguments:
 		call_deferred("_run_game_smoke")
+	elif PLANTING_INPUT_SMOKE_ARGUMENT in user_arguments:
+		call_deferred("_run_planting_input_smoke")
 	elif PLANTING_CAPTURE_ARGUMENT in user_arguments:
 		call_deferred("_capture_planting_interaction_preview")
 	elif CAPTURE_ARGUMENT in user_arguments:
@@ -118,6 +131,75 @@ func _process(delta: float) -> void:
 	if toast_time > 0.0:
 		toast_time = maxf(0.0, toast_time - delta)
 		_refresh_toast()
+	if not land_outline_world_polygons.is_empty() \
+			and land_outline_viewport_size != get_viewport().get_visible_rect().size:
+		_refresh_connected_land_outline_projection()
+
+
+func _input(event: InputEvent) -> void:
+	# 种植目标位于 3D 世界，不能依赖 _unhandled_input：某些 HUD 控件会先
+	# 消耗鼠标事件。这里先处理不在 UI 上的指针事件，UI 区仍交给 Control。
+	if event is InputEventMouseMotion:
+		var motion: InputEventMouseMotion = event
+		if is_panning:
+			_pan_camera_by_screen(motion.relative)
+			get_viewport().set_input_as_handled()
+			return
+		if _pointer_is_over_ui(motion.position):
+			_clear_hover_visuals()
+			return
+		_update_hover(motion.position)
+		return
+
+	if not event is InputEventMouseButton:
+		return
+	var mouse_button: InputEventMouseButton = event
+	if not mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_MIDDLE:
+		is_panning = false
+		get_viewport().set_input_as_handled()
+		return
+	if _pointer_is_over_ui(mouse_button.position):
+		return
+	if mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_WHEEL_UP:
+		camera.size = clampf(camera.size - CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
+		_update_camera()
+		get_viewport().set_input_as_handled()
+		return
+	if mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		camera.size = clampf(camera.size + CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
+		_update_camera()
+		get_viewport().set_input_as_handled()
+		return
+	if mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_MIDDLE:
+		is_panning = true
+		get_viewport().set_input_as_handled()
+		return
+	if not mouse_button.pressed:
+		return
+	if mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+		var now_sec := float(Time.get_ticks_msec()) / 1000.0
+		if int(board_state.phase) == BoardState.Phase.ACTION_WINDOW \
+				and now_sec - last_right_click_time <= RIGHT_DOUBLE_CLICK_INTERVAL:
+			# 双击右键：地块放置完成后快速结束回合
+			last_right_click_time = -1.0
+			_on_end_turn_button()
+			get_viewport().set_input_as_handled()
+			return
+		last_right_click_time = now_sec
+		_rotate_current_tile()
+		get_viewport().set_input_as_handled()
+		return
+	if mouse_button.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	# 即使用户没有在点击前产生鼠标移动，也同步一次悬停状态，保证种植
+	# 反馈和实际选中的格子来自同一条射线链路。
+	_update_hover(mouse_button.position)
+	var board_hit := _screen_to_cell(mouse_button.position)
+	if board_hit.is_empty():
+		return
+	_on_board_cell_clicked(board_hit["cell"])
+	get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -135,66 +217,36 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 
-	if event is InputEventMouseButton:
-		var mb: InputEventMouseButton = event
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera.size = clampf(camera.size - CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
-			_update_camera()
-			get_viewport().set_input_as_handled()
-			return
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera.size = clampf(camera.size + CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
-			_update_camera()
-			get_viewport().set_input_as_handled()
-			return
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_MIDDLE:
-			is_panning = true
-			get_viewport().set_input_as_handled()
-			return
-		if not mb.pressed and mb.button_index == MOUSE_BUTTON_MIDDLE:
-			is_panning = false
-			get_viewport().set_input_as_handled()
-			return
-
-	if event is InputEventMouseMotion:
-		var mm: InputEventMouseMotion = event
-		if is_panning:
-			_pan_camera_by_screen(mm.relative)
-			return
-		_update_hover(event.position)
-		return
-
-	if not event is InputEventMouseButton or not event.pressed:
-		return
-
-	if event.button_index == MOUSE_BUTTON_RIGHT:
-		var now_sec := float(Time.get_ticks_msec()) / 1000.0
-		if int(board_state.phase) == BoardState.Phase.ACTION_WINDOW \
-				and now_sec - last_right_click_time <= RIGHT_DOUBLE_CLICK_INTERVAL:
-			# 双击右键：地块放置完成后快速结束回合
-			last_right_click_time = -1.0
-			_on_end_turn_button()
-			get_viewport().set_input_as_handled()
-			return
-		last_right_click_time = now_sec
-		_rotate_current_tile()
-		get_viewport().set_input_as_handled()
-		return
-	if event.button_index != MOUSE_BUTTON_LEFT:
-		return
-
-	var board_hit := _screen_to_cell(event.position)
-	if board_hit.is_empty():
-		return
-	_on_board_cell_clicked(board_hit["cell"])
-	get_viewport().set_input_as_handled()
-
 
 var is_panning := false
 
 # 双击右键结束回合（仅动作窗口阶段生效）
 const RIGHT_DOUBLE_CLICK_INTERVAL := 0.35
 var last_right_click_time := -1.0
+
+
+func _pointer_is_over_ui(screen_position: Vector2) -> bool:
+	var hovered_control := get_viewport().gui_get_hovered_control()
+	if hovered_control != null \
+		and hovered_control.is_visible_in_tree() \
+		and hovered_control.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		return true
+	return _ui_tree_contains_pointer(ui_layer, screen_position)
+
+
+func _ui_tree_contains_pointer(node: Node, screen_position: Vector2) -> bool:
+	if node == null:
+		return false
+	for child in node.get_children():
+		if child is Control:
+			var control := child as Control
+			if control.is_visible_in_tree() \
+					and control.mouse_filter != Control.MOUSE_FILTER_IGNORE \
+					and control.get_global_rect().has_point(screen_position):
+				return true
+		if _ui_tree_contains_pointer(child, screen_position):
+			return true
+	return false
 
 
 # === 相机 ===
@@ -207,6 +259,7 @@ func _update_camera() -> void:
 		horizontal * cos(CAMERA_AZIMUTH),
 	)
 	camera.look_at(camera_target, Vector3.UP)
+	_refresh_connected_land_outline_projection()
 
 
 func _pan_camera_by_screen(screen_delta: Vector2) -> void:
@@ -276,6 +329,66 @@ func _build_highlight_quad() -> void:
 	hover_highlight.position.y = HIGHLIGHT_Y
 	hover_highlight.visible = false
 	add_child(hover_highlight)
+
+
+func _build_land_outline_overlay() -> void:
+	# 不再把每个凸分割 planting mask 的所有边直接铺到 3D 地表上。
+	# 先在离屏视口中把所有 LAND 掩码绘成一张二值屏幕图，再由 shader 只提取
+	# 该图的外缘。这样即使烘焙掩码由不相交的凸分割件组成，也不会显出内部曲线。
+	land_outline_canvas = CanvasLayer.new()
+	land_outline_canvas.name = "LandOutlineOverlay"
+	land_outline_canvas.layer = 1
+	add_child(land_outline_canvas)
+
+	land_outline_mask_viewport = SubViewport.new()
+	land_outline_mask_viewport.name = "LandOutlineMaskViewport"
+	land_outline_mask_viewport.transparent_bg = true
+	land_outline_mask_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	land_outline_mask_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(land_outline_mask_viewport)
+	land_outline_mask_root = Node2D.new()
+	land_outline_mask_root.name = "ProjectedLandMasks"
+	land_outline_mask_viewport.add_child(land_outline_mask_root)
+
+	land_outline_texture_rect = TextureRect.new()
+	land_outline_texture_rect.name = "ConnectedLandOuterOutline"
+	land_outline_texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	land_outline_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	land_outline_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	land_outline_texture_rect.texture = land_outline_mask_viewport.get_texture()
+	land_outline_texture_rect.material = _make_land_outline_material()
+	land_outline_canvas.add_child(land_outline_texture_rect)
+
+
+func _make_land_outline_material() -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = """
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform vec4 outline_color = vec4(0.72, 0.96, 0.49, 1.0);
+uniform float outline_width = 3.0;
+
+void fragment() {
+	float center = texture(TEXTURE, UV).a;
+	vec2 step_size = TEXTURE_PIXEL_SIZE * outline_width;
+	float nearby = 0.0;
+	nearby = max(nearby, texture(TEXTURE, UV + vec2( step_size.x, 0.0)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2(-step_size.x, 0.0)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2(0.0,  step_size.y)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2(0.0, -step_size.y)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2( step_size.x,  step_size.y)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2(-step_size.x,  step_size.y)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2( step_size.x, -step_size.y)).a);
+	nearby = max(nearby, texture(TEXTURE, UV + vec2(-step_size.x, -step_size.y)).a);
+	float outer_edge = clamp(nearby - center, 0.0, 1.0);
+	COLOR = vec4(outline_color.rgb, outer_edge * outline_color.a);
+}
+"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter(&"outline_width", LAND_OUTLINE_WIDTH)
+	return material
 
 
 func _add_placed_tile_visual(cell: Vector2i) -> void:
@@ -415,16 +528,16 @@ func _update_place_hover() -> void:
 
 func _update_action_hover() -> void:
 	hover_highlight.visible = false
-	if not has_hovered_cell or not board_state.has_tile(hovered_cell):
-		_clear_connected_land_outline()
-		return
-	var connected_cells: Array[Vector2i] = board_state.connected_land_cells_at(hovered_cell)
-	if connected_cells.is_empty():
+	if not has_hovered_cell or not board_state.has_tile(hovered_cell) \
+			or not board_state.is_turn_placed(hovered_cell):
 		_clear_connected_land_outline()
 		return
 	var check: Dictionary = board_state.can_plant_any_species_at(hovered_cell, board_state.active_player)
-	var outline_color := Color("#b8f47d") if bool(check["valid"]) else Color("#f0b46c")
-	_show_connected_land_outline(connected_cells, outline_color)
+	if not bool(check["valid"]):
+		_clear_connected_land_outline()
+		return
+	var placed_cell_only: Array[Vector2i] = [hovered_cell]
+	_show_connected_land_outline(placed_cell_only, Color("#b8f47d"))
 
 
 func _clear_hover_visuals() -> void:
@@ -436,93 +549,96 @@ func _clear_hover_visuals() -> void:
 
 
 # 只根据各个已实例化预制件自带的 planting_masks 生成交互描边。
-# 它是瞬时提示层，不改写地块网格、端口或基础材质。
+# 它是瞬时屏幕空间提示层，不改写地块网格、端口或基础材质。离屏遮罩的
+# alpha 会把每个 LAND 分割件合为一个视觉区域，shader 只绘制这个区域的外缘。
 func _show_connected_land_outline(cells: Array[Vector2i], color: Color) -> void:
 	var signature := "%s|%s" % [color.to_html(true), str(cells)]
 	if signature == land_outline_signature:
 		return
 	_clear_connected_land_outline()
 	land_outline_signature = signature
+	land_outline_color = color
+	var source_polygons: Array = []
 	for cell in cells:
 		var tile: Node3D = placed_tile_nodes.get(cell, null)
 		if tile == null:
 			continue
-		var layer := Node3D.new()
-		layer.name = "ConnectedLandOutline"
-		tile.add_child(layer)
-		land_outline_nodes.append(layer)
 		var artwork := tile as TileArtwork3D
 		if artwork != null and not artwork.planting_masks.is_empty():
 			for mask in artwork.planting_masks:
 				if mask == null or not mask.is_valid():
 					continue
-				var outline := _make_land_mask_outline(mask, color)
-				if outline != null:
-					layer.add_child(outline)
+				var polygon := _world_outline_polygon(tile, mask)
+				if polygon.size() >= 3:
+					source_polygons.append(polygon)
 		else:
-			var fallback := _make_fallback_land_outline(color)
-			if fallback != null:
-				layer.add_child(fallback)
+			source_polygons.append(_fallback_land_outline_polygon(tile))
+	land_outline_world_polygons = source_polygons
+	_refresh_connected_land_outline_projection()
 
 
 func _clear_connected_land_outline() -> void:
-	for node in land_outline_nodes:
-		if is_instance_valid(node):
-			node.queue_free()
-	land_outline_nodes.clear()
+	if land_outline_mask_root != null:
+		for child in land_outline_mask_root.get_children():
+			child.free()
+	if land_outline_mask_viewport != null:
+		land_outline_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	land_outline_world_polygons.clear()
+	land_outline_color = Color(0.0, 0.0, 0.0, 0.0)
+	land_outline_viewport_size = Vector2.ZERO
 	land_outline_signature = ""
 
 
-func _make_land_mask_outline(mask: PlantingMask3D, color: Color) -> MeshInstance3D:
-	return _make_polygon_outline(mask.boundary, mask.surface_height + 0.032, color)
+func _world_outline_polygon(tile: Node3D, mask: PlantingMask3D) -> PackedVector3Array:
+	var polygon := PackedVector3Array()
+	for local_point in mask.boundary:
+		var world_point := tile.to_global(Vector3(
+			local_point.x,
+			mask.surface_height + LAND_OUTLINE_HEIGHT_OFFSET,
+			local_point.y,
+		))
+		polygon.append(world_point)
+	return polygon
 
 
-func _make_fallback_land_outline(color: Color) -> MeshInstance3D:
+func _fallback_land_outline_polygon(tile: Node3D) -> PackedVector3Array:
 	var half := TILE_SIZE * 0.5 - 0.14
-	var boundary := PackedVector2Array([
+	var local_boundary := PackedVector2Array([
 		Vector2(-half, -half), Vector2(half, -half),
 		Vector2(half, half), Vector2(-half, half),
 	])
-	return _make_polygon_outline(boundary, HIGHLIGHT_Y + 0.02, color)
+	var polygon := PackedVector3Array()
+	for local_point in local_boundary:
+		var world_point := tile.to_global(Vector3(local_point.x, HIGHLIGHT_Y + LAND_OUTLINE_HEIGHT_OFFSET, local_point.y))
+		polygon.append(world_point)
+	return polygon
 
 
-func _make_polygon_outline(boundary: PackedVector2Array, height: float, color: Color) -> MeshInstance3D:
-	if boundary.size() < 3:
-		return null
-	var tool := SurfaceTool.new()
-	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var half_width := 0.035
-	for index in range(boundary.size()):
-		var start := boundary[index]
-		var finish := boundary[(index + 1) % boundary.size()]
-		var direction := finish - start
-		if direction.length_squared() < 0.000001:
+func _refresh_connected_land_outline_projection() -> void:
+	if land_outline_mask_viewport == null or land_outline_mask_root == null or land_outline_texture_rect == null:
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	land_outline_viewport_size = viewport_size
+	land_outline_mask_viewport.size = Vector2i(roundi(viewport_size.x), roundi(viewport_size.y))
+	for child in land_outline_mask_root.get_children():
+		child.free()
+	var material := land_outline_texture_rect.material as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter(&"outline_color", land_outline_color)
+	for world_polygon in land_outline_world_polygons:
+		var source: PackedVector3Array = world_polygon
+		if source.size() < 3:
 			continue
-		var side := Vector2(-direction.y, direction.x).normalized() * half_width
-		var a := Vector3(start.x + side.x, height, start.y + side.y)
-		var b := Vector3(start.x - side.x, height, start.y - side.y)
-		var c := Vector3(finish.x - side.x, height, finish.y - side.y)
-		var d := Vector3(finish.x + side.x, height, finish.y + side.y)
-		tool.add_vertex(a)
-		tool.add_vertex(b)
-		tool.add_vertex(c)
-		tool.add_vertex(a)
-		tool.add_vertex(c)
-		tool.add_vertex(d)
-	var mesh := tool.commit()
-	if mesh == null:
-		return null
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.emission_enabled = true
-	material.emission = color
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.no_depth_test = true
-	var instance := MeshInstance3D.new()
-	instance.mesh = mesh
-	instance.material_override = material
-	return instance
+		var projected := PackedVector2Array()
+		for world_point in source:
+			projected.append(camera.unproject_position(world_point))
+		var mask_polygon := Polygon2D.new()
+		mask_polygon.polygon = projected
+		mask_polygon.color = Color.WHITE
+		land_outline_mask_root.add_child(mask_polygon)
+	land_outline_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func _refresh_tile_growth(cell: Vector2i) -> void:
@@ -634,7 +750,7 @@ func _on_finish_place_button() -> void:
 		_set_toast("完成放置失败：%s" % result["reason"], 2.5)
 		return
 	_clear_menu()
-	_set_toast("进入动作窗口 · 悬停查看连通土地，左键点空土地种植", 2.5)
+	_set_toast("进入动作窗口 · 悬停本回合新地块，左键种植", 2.5)
 	_refresh_hud()
 
 
@@ -717,19 +833,19 @@ func _try_place_current_tile(cell: Vector2i) -> void:
 	_refresh_preview_piece()
 	_center_camera_on(cell)
 	if automatic_expansion.is_empty() and evicted_ids.is_empty():
-		_set_toast("已放置 · 悬停查看连通土地，左键点空土地种植", 2.8)
+		_set_toast("已放置 · 悬停本回合新地块，左键种植", 2.8)
 	elif not automatic_expansion.is_empty():
-		_set_toast("已放置 · 邻接植物自动扩张；悬停查看连通土地", 2.8)
+		_set_toast("已放置 · 邻接植物自动扩张；可在本回合新地块种植", 2.8)
 	else:
 		_set_toast("已放置 · 连通区域发生物种驱逐，种子已退还", 2.8)
 	_refresh_hud()
-	# 放牌点击所在的位置就是最自然的第一个种植候选；无需等用户额外移动一次鼠标。
+	# 放牌点击所在的位置是唯一主动种植候选；无需等用户额外移动一次鼠标。
 	call_deferred("_update_hover", get_viewport().get_mouse_position())
 
 
 func _try_open_action_menu_for(cell: Vector2i) -> void:
-	if not board_state.has_tile(cell):
-		_set_toast("该位置尚未放地块。", 2.0)
+	if not board_state.has_tile(cell) or not board_state.is_turn_placed(cell):
+		_clear_connected_land_outline()
 		return
 	_open_plant_menu(cell)
 
@@ -764,14 +880,27 @@ func _handle_menu_choice(index: int) -> void:
 		var result: Dictionary = board_state.plant(menu_cell, species, owner)
 		if bool(result["valid"]):
 			Sfx.play("plant_seed")
+			var automatic_expansions: Array = result.get("automatic_expansions", [])
 			var species_conflict: Dictionary = result.get("species_conflict", {})
 			var evicted_ids: Array = species_conflict.get("evicted_plant_ids", [])
-			if evicted_ids.is_empty():
+			if not automatic_expansions.is_empty():
+				Sfx.play("plant_grow")
+			if automatic_expansions.is_empty() and evicted_ids.is_empty():
 				_refresh_tile_growth(menu_cell)
 				_set_toast("已种 %s（种子 −1）" % PLANT_SCRIPT.species_label(species), 2.0)
+			elif evicted_ids.is_empty():
+				_refresh_all_growth()
+				_set_toast("已种 %s（种子 −1）· 自动扩张至 %d 块相邻土地" % [
+					PLANT_SCRIPT.species_label(species), automatic_expansions.size(),
+				], 2.8)
 			else:
 				_refresh_all_growth()
-				_set_toast("已种 %s · 低优先级植物已被驱逐并退种" % PLANT_SCRIPT.species_label(species), 2.8)
+				var expansion_note := ""
+				if not automatic_expansions.is_empty():
+					expansion_note = " · 自动扩张至 %d 块相邻土地" % automatic_expansions.size()
+				_set_toast("已种 %s%s · 低优先级植物已被驱逐并退种" % [
+					PLANT_SCRIPT.species_label(species), expansion_note,
+				], 3.0)
 		else:
 			Sfx.play("tile_invalid", -6.0)
 			_set_toast("种植失败：%s" % result["reason"], 2.5)
@@ -793,7 +922,10 @@ func _clear_menu() -> void:
 func _build_hud() -> void:
 	var ui := CanvasLayer.new()
 	ui.name = "UI"
+	# 种植外轮廓在独立的 layer 1；界面始终位于其上，避免提示线穿过按钮。
+	ui.layer = 2
 	add_child(ui)
+	ui_layer = ui
 
 	# 信息面板（右上：玩家信息 + 操作按钮）
 	var panel := PanelContainer.new()
@@ -862,7 +994,10 @@ func _build_hud() -> void:
 	menu_panel = PanelContainer.new()
 	menu_panel.name = "ActionMenu"
 	menu_panel.visible = false
-	menu_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	# CanvasLayer 不是 Control 父节点，中心/底部锚点不会替这个动态菜单完成
+	# 可靠的最小尺寸布局。改为显式按视口定位，避免菜单被排到屏幕外。
+	menu_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	menu_panel.custom_minimum_size = Vector2(300, 0)
 	menu_panel.add_theme_stylebox_override("panel", _make_panel_style())
 	ui.add_child(menu_panel)
 	menu_box = VBoxContainer.new()
@@ -960,6 +1095,19 @@ func _build_action_menu() -> void:
 			var b := _make_button("%s（剩 %d）" % [PLANT_SCRIPT.species_label(species), int(bag.get(species, 0))], _menu_choice(i))
 			menu_box.add_child(b)
 	menu_panel.visible = true
+	call_deferred("_position_action_menu")
+
+
+func _position_action_menu() -> void:
+	if menu_panel == null or not menu_panel.visible:
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	var minimum_size := menu_panel.get_combined_minimum_size()
+	menu_panel.size = minimum_size
+	menu_panel.position = Vector2(
+		roundf((viewport_size.x - minimum_size.x) * 0.5),
+		maxf(16.0, viewport_size.y - minimum_size.y - 28.0),
+	)
 
 
 func _menu_choice(index: int) -> Callable:
@@ -1358,10 +1506,21 @@ func _run_plants_smoke() -> bool:
 		push_error("Plants smoke failed: connected LAND hover query did not include both joined tiles: %s" % str(connected))
 		return false
 
-	# 目标是开局就存在的格，而不是本回合刚放的 (1,0)：验证 r16 的任意历史地块种植。
-	var r1 = board.plant(Vector2i.ZERO, GD.Species.GRASS, 0)
+	var old_target = board.plant(Vector2i.ZERO, GD.Species.GRASS, 0)
+	if bool(old_target["valid"]) or not String(old_target["reason"]).contains("刚放置"):
+		push_error("Plants smoke failed: planting on an older tile was not rejected by the new-tile rule: %s" % old_target["reason"])
+		return false
+	var wrong_owner = board.plant(Vector2i.RIGHT, GD.Species.GRASS, 1)
+	if bool(wrong_owner["valid"]):
+		push_error("Plants smoke failed: a non-active player planted the current player's new tile.")
+		return false
+	var r1 = board.plant(Vector2i.RIGHT, GD.Species.GRASS, 0)
 	if not bool(r1["valid"]):
-		push_error("Plants smoke failed: planting grass on an older legal tile was rejected: %s" % r1["reason"])
+		push_error("Plants smoke failed: planting grass on the current player's new tile was rejected: %s" % r1["reason"])
+		return false
+	var manual_expansions: Array = r1.get("automatic_expansions", [])
+	if manual_expansions.size() != 1 or Vector2i(manual_expansions[0].get("target_cell", Vector2i.ZERO)) != Vector2i.ZERO:
+		push_error("Plants smoke failed: manual planting did not expand into its directly adjacent existing LAND tile: %s" % str(manual_expansions))
 		return false
 	if int(board.seed_inventory[0][GD.Species.GRASS]) != 1:
 		push_error("Plants smoke failed: P1 grass seed not consumed.")
@@ -1371,15 +1530,9 @@ func _run_plants_smoke() -> bool:
 	if bool(r_repeat["valid"]):
 		push_error("Plants smoke failed: a second active planting action was accepted.")
 		return false
-	board.planting_action_used = false
-	var r_other = board.plant(Vector2i.ZERO, GD.Species.GRASS, 1)
-	if bool(r_other["valid"]):
-		push_error("Plants smoke failed: P2 planting on P1's occupied tile was accepted.")
+	if not board.tile_has_any_plant(Vector2i.RIGHT) or not board.tile_has_any_plant(Vector2i.ZERO):
+		push_error("Plants smoke failed: manual planting did not occupy its tile and its directly connected neighbour.")
 		return false
-	if not board.tile_has_any_plant(Vector2i.ZERO):
-		push_error("Plants smoke failed: successful planting did not occupy the target tile.")
-		return false
-	board.planting_action_used = true
 	var finish: Dictionary = board.finish_action_window(PLANT_ENGINE_SCRIPT, false)
 	if not bool(finish["valid"]):
 		push_error("Plants smoke failed: could not finish the planting turn: %s" % finish["reason"])
@@ -1388,66 +1541,201 @@ func _run_plants_smoke() -> bool:
 	if not bool(deal_auto["valid"]):
 		push_error("Plants smoke failed: auto-expansion deal was rejected: %s" % deal_auto["reason"])
 		return false
-	var auto_place: Dictionary = board.commit_placement(Vector2i.LEFT, 0)
+	var auto_cell := Vector2i(2, 0)
+	var auto_place: Dictionary = board.commit_placement(auto_cell, 0)
 	if not bool(auto_place["valid"]):
 		push_error("Plants smoke failed: auto-expansion placement was rejected: %s" % auto_place["reason"])
 		return false
-	if Dictionary(auto_place.get("automatic_expansion", {})).is_empty() or not board.tile_has_any_plant(Vector2i.LEFT):
+	if Dictionary(auto_place.get("automatic_expansion", {})).is_empty() or not board.tile_has_any_plant(auto_cell):
 		push_error("Plants smoke failed: directly adjacent connected LAND did not auto-expand.")
 		return false
 	if int(board.seed_inventory[0][GD.Species.GRASS]) != 1:
 		push_error("Plants smoke failed: automatic expansion consumed a grass seed.")
 		return false
-	# 目标格本身空着即可种入已有植物的 land_region；花会立即驱逐该区域的草。
-	var flower_into_grass: Dictionary = board.plant(Vector2i.RIGHT, GD.Species.FLOWER, board.active_player)
-	if not bool(flower_into_grass["valid"]):
-		push_error("Plants smoke failed: planting into an occupied land region was rejected: %s" % flower_into_grass["reason"])
+	var occupied_new_tile = board.plant(auto_cell, GD.Species.FLOWER, board.active_player)
+	if bool(occupied_new_tile["valid"]):
+		push_error("Plants smoke failed: automatic expansion did not keep the new tile occupied.")
 		return false
-	if not board.tile_has_any_plant(Vector2i.RIGHT) or board.tile_has_any_plant(Vector2i.ZERO) or board.tile_has_any_plant(Vector2i.LEFT):
-		push_error("Plants smoke failed: flower/grass conflict did not keep only the higher-priority flower.")
+
+	# 手动种植时必须一次覆盖全部直接邻居，而不是只取一个候选；同时
+	# (0,0) 是新种植物 (1,1) 的对角格，用来确保本事件不会递归跨两格。
+	var multi_neighbour_board = BOARD_STATE_SCRIPT.new()
+	multi_neighbour_board.start_with(starter)
+	for setup_cell in [Vector2i.RIGHT, Vector2i.DOWN]:
+		var setup: Dictionary = multi_neighbour_board.place(starter, setup_cell, 0, 0)
+		if not bool(setup["valid"]):
+			push_error("Plants smoke failed: multi-neighbour setup placement at %s was rejected: %s" % [setup_cell, setup["reason"]])
+			return false
+	var multi_deal: Dictionary = multi_neighbour_board.deal_tile(starter)
+	if not bool(multi_deal["valid"]):
+		push_error("Plants smoke failed: multi-neighbour deal was rejected: %s" % multi_deal["reason"])
 		return false
-	if int(board.seed_inventory[0][GD.Species.GRASS]) != 2:
-		push_error("Plants smoke failed: grass seed was not refunded once for the evicted land region.")
+	var multi_place: Dictionary = multi_neighbour_board.commit_placement(Vector2i(1, 1), 0)
+	if not bool(multi_place["valid"]):
+		push_error("Plants smoke failed: multi-neighbour placement was rejected: %s" % multi_place["reason"])
+		return false
+	var multi_seed: Dictionary = multi_neighbour_board.plant(Vector2i(1, 1), GD.Species.GRASS, 0)
+	if not bool(multi_seed["valid"]):
+		push_error("Plants smoke failed: multi-neighbour manual planting was rejected: %s" % multi_seed["reason"])
+		return false
+	var multi_expansions: Array = multi_seed.get("automatic_expansions", [])
+	var multi_targets: Dictionary = {}
+	for expansion in multi_expansions:
+		multi_targets[Dictionary(expansion).get("target_cell", Vector2i.ZERO)] = true
+	if multi_expansions.size() != 2 or not multi_targets.has(Vector2i.RIGHT) or not multi_targets.has(Vector2i.DOWN):
+		push_error("Plants smoke failed: manual planting did not expand to every direct LAND neighbour: %s" % str(multi_expansions))
+		return false
+	if not multi_neighbour_board.tile_has_any_plant(Vector2i.RIGHT) or not multi_neighbour_board.tile_has_any_plant(Vector2i.DOWN):
+		push_error("Plants smoke failed: a direct LAND neighbour remained unoccupied after manual expansion.")
+		return false
+	if multi_neighbour_board.tile_has_any_plant(Vector2i.ZERO):
+		push_error("Plants smoke failed: manual expansion recursed beyond its direct LAND neighbours.")
+		return false
+	if int(multi_neighbour_board.seed_inventory[0][GD.Species.GRASS]) != 1:
+		push_error("Plants smoke failed: multi-neighbour automatic expansion consumed an extra grass seed.")
 		return false
 
 	print("PLANTS_SMOKE_PASS.")
 	return true
 
 
+func _screen_position_for_cell(cell: Vector2i) -> Vector2:
+	# 与 _screen_to_cell 使用同一棋盘平面，避免测试因为地形装饰高度而绕过
+	# 实际玩家的拾取路径。
+	return camera.unproject_position(_cell_world_position(cell) + Vector3(0.0, HIGHLIGHT_Y, 0.0))
+
+
+func _dispatch_mouse_motion(screen_position: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = screen_position
+	motion.global_position = screen_position
+	motion.relative = Vector2.ZERO
+	Input.parse_input_event(motion)
+
+
+func _dispatch_left_click(screen_position: Vector2) -> void:
+	_dispatch_mouse_motion(screen_position)
+	var press := InputEventMouseButton.new()
+	press.position = screen_position
+	press.global_position = screen_position
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.pressed = true
+	Input.parse_input_event(press)
+	var release := InputEventMouseButton.new()
+	release.position = screen_position
+	release.global_position = screen_position
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.button_mask = 0
+	release.pressed = false
+	Input.parse_input_event(release)
+
+
+func _dispatch_left_click_to_cell(cell: Vector2i) -> void:
+	_dispatch_left_click(_screen_position_for_cell(cell))
+
+
+func _run_planting_input_smoke() -> void:
+	# 从 Godot 的 Input 分发入口走完整链路，而不是直接调用棋盘点击方法：
+	# PLACE 的左键放牌、ACTION_WINDOW 的左键打开物种菜单都必须可用。
+	var starter := tile_catalog.starter_tile()
+	var deal: Dictionary = board_state.deal_tile(starter)
+	if not bool(deal["valid"]):
+		push_error("Planting input smoke: setup deal failed: %s" % deal["reason"])
+		get_tree().quit(1)
+		return
+	await get_tree().process_frame
+	_dispatch_left_click_to_cell(Vector2i.RIGHT)
+	await get_tree().process_frame
+	if int(board_state.phase) != BoardState.Phase.ACTION_WINDOW or not board_state.has_tile(Vector2i.RIGHT):
+		push_error("Planting input smoke: routed left click did not place the tile and enter ACTION_WINDOW.")
+		get_tree().quit(1)
+		return
+	_dispatch_mouse_motion(_screen_position_for_cell(Vector2i.ZERO))
+	await get_tree().process_frame
+	if not land_outline_world_polygons.is_empty() or menu_mode != MenuMode.NONE:
+		push_error("Planting input smoke: hovering an older tile produced planting feedback.")
+		get_tree().quit(1)
+		return
+	_dispatch_left_click_to_cell(Vector2i.ZERO)
+	await get_tree().process_frame
+	if menu_mode != MenuMode.NONE or menu_panel.visible:
+		push_error("Planting input smoke: clicking an older tile opened a planting menu.")
+		get_tree().quit(1)
+		return
+	_dispatch_mouse_motion(_screen_position_for_cell(Vector2i.RIGHT))
+	await get_tree().process_frame
+	if land_outline_world_polygons.is_empty():
+		push_error("Planting input smoke: hovering the current player's new LAND tile did not show its outline.")
+		get_tree().quit(1)
+		return
+	_dispatch_left_click_to_cell(Vector2i.RIGHT)
+	await get_tree().process_frame
+	if menu_mode != MenuMode.PLANT or not menu_panel.visible or menu_species_targets.is_empty():
+		push_error("Planting input smoke: routed left click on the current player's new LAND tile did not open the species menu.")
+		get_tree().quit(1)
+		return
+	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
+	if menu_panel.get_global_rect().intersection(viewport_rect).get_area() <= 0.0:
+		push_error("Planting input smoke: species menu opened outside the visible viewport.")
+		get_tree().quit(1)
+		return
+	print("PLANTING_INPUT_SMOKE_PASS: older tiles stayed inert; the current new LAND tile opened a visible species menu.")
+	get_tree().quit()
+
+
 func _capture_planting_interaction_preview() -> void:
-	# 真实场景内的可见验收：先显示旧地块的连通 LAND 描边，再在该旧地块种植。
-	# 不伪造 2D 图层；调用的正是鼠标悬停与状态机所使用的生产方法。
+	# 真实场景内的可见验收：旧地块悬停保持无反馈；仅本回合新地块显示
+	# 合并 LAND 外轮廓，并可由输入分发链路左键打开菜单并种植。
 	var starter := tile_catalog.starter_tile()
 	var deal: Dictionary = board_state.deal_tile(starter)
 	if not bool(deal["valid"]):
 		push_error("Planting capture: deal failed: %s" % deal["reason"])
 		get_tree().quit(1)
 		return
-	_try_place_current_tile(Vector2i.RIGHT)
+	await get_tree().process_frame
+	_dispatch_left_click_to_cell(Vector2i.RIGHT)
+	await get_tree().process_frame
 	if int(board_state.phase) != BoardState.Phase.ACTION_WINDOW:
-		push_error("Planting capture: placement did not reach action window.")
+		push_error("Planting capture: routed placement click did not reach action window.")
 		get_tree().quit(1)
 		return
 
-	has_hovered_cell = true
-	hovered_cell = Vector2i.ZERO
-	_update_action_hover()
+	_dispatch_mouse_motion(_screen_position_for_cell(Vector2i.ZERO))
 	await get_tree().process_frame
 	await get_tree().create_timer(0.2).timeout
 	var capture_directory := ProjectSettings.globalize_path("res://artifacts")
 	DirAccess.make_dir_recursive_absolute(capture_directory)
-	var hover_image := get_viewport().get_texture().get_image()
-	hover_image.save_png(capture_directory.path_join("planting_hover_connected_land_3d.png"))
-
-	_on_board_cell_clicked(Vector2i.ZERO)
-	var flower_choice := menu_species_targets.find(PLANT_SCRIPT.Species.FLOWER)
-	if menu_mode != MenuMode.PLANT or flower_choice < 0:
-		push_error("Planting capture: clicking an older legal tile did not open the species menu.")
+	if not land_outline_world_polygons.is_empty():
+		push_error("Planting capture: hovering an older tile produced an outline.")
 		get_tree().quit(1)
 		return
+	var old_hover_image := get_viewport().get_texture().get_image()
+	old_hover_image.save_png(capture_directory.path_join("planting_hover_old_tile_no_reaction_3d.png"))
+
+	_dispatch_mouse_motion(_screen_position_for_cell(Vector2i.RIGHT))
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
+	if land_outline_world_polygons.is_empty():
+		push_error("Planting capture: the current new tile did not produce an outline.")
+		get_tree().quit(1)
+		return
+	var hover_image := get_viewport().get_texture().get_image()
+	hover_image.save_png(capture_directory.path_join("planting_hover_new_tile_3d.png"))
+
+	_dispatch_left_click_to_cell(Vector2i.RIGHT)
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
+	var flower_choice := menu_species_targets.find(PLANT_SCRIPT.Species.FLOWER)
+	if menu_mode != MenuMode.PLANT or flower_choice < 0:
+		push_error("Planting capture: routed left click on the current new tile did not open the species menu.")
+		get_tree().quit(1)
+		return
+	var menu_image := get_viewport().get_texture().get_image()
+	menu_image.save_png(capture_directory.path_join("planting_species_menu_new_tile_3d.png"))
 	_handle_menu_choice(flower_choice)
-	if not board_state.tile_has_any_plant(Vector2i.ZERO):
-		push_error("Planting capture: selecting a species did not plant on the older tile.")
+	if not board_state.tile_has_any_plant(Vector2i.RIGHT) or not board_state.tile_has_any_plant(Vector2i.ZERO):
+		push_error("Planting capture: selecting a species did not plant the current new tile and its directly connected neighbour.")
 		get_tree().quit(1)
 		return
 	_clear_connected_land_outline()
@@ -1455,8 +1743,8 @@ func _capture_planting_interaction_preview() -> void:
 	await get_tree().process_frame
 	await get_tree().create_timer(0.2).timeout
 	var planted_image := get_viewport().get_texture().get_image()
-	planted_image.save_png(capture_directory.path_join("planting_success_older_tile_3d.png"))
-	print("PLANTING_INTERACTION_CAPTURE_PASS: hover outline and older-tile planting captured.")
+	planted_image.save_png(capture_directory.path_join("planting_success_new_tile_3d.png"))
+	print("PLANTING_INTERACTION_CAPTURE_PASS: older tiles stayed inert; new-tile outline, menu, planting, and direct-neighbour expansion captured.")
 	get_tree().quit()
 
 

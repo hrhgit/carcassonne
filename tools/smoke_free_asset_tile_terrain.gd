@@ -5,6 +5,9 @@ const RUNTIME_SCATTER := preload("res://scripts/runtime_plant_scatter_3d.gd")
 const TILE_SIZE := 4.9
 const HALF_SIZE := 2.45
 const EPSILON := 0.0003
+const WATER_MEADOW_MIN_CLEARANCE := 0.006
+const LAND_MEADOW_MIN_CLEARANCE := 0.006
+const LAND_SURFACE_HEIGHT := 0.190
 
 
 func _init() -> void:
@@ -41,6 +44,28 @@ func _smoke() -> void:
 	if water_uv2.size() != water_vertices.size() or water_uv2.is_empty() or maximum_shore_distance < 0.20:
 		_fail("Pilot water lost its baked d/s UV2 data.")
 		return
+	var elevated_land_water := false
+	for vertex in water_vertices:
+		if vertex.y > 0.190 and vertex.z < 0.90:
+			elevated_land_water = true
+			break
+	if not elevated_land_water:
+		_fail("Polygonal water no longer visibly enters the LAND contact.")
+		return
+	var minimum_water_clearance := _minimum_surface_meadow_clearance(water.mesh as ArrayMesh, meadow.mesh as ArrayMesh)
+	if minimum_water_clearance == INF or minimum_water_clearance < WATER_MEADOW_MIN_CLEARANCE:
+		_fail("Water surface falls into or too near the MEADOW relief (minimum clearance %.5f)." % minimum_water_clearance)
+		return
+	var minimum_land_clearance := _minimum_surface_meadow_clearance(land.mesh as ArrayMesh, meadow.mesh as ArrayMesh)
+	if minimum_land_clearance == INF or minimum_land_clearance < LAND_MEADOW_MIN_CLEARANCE:
+		_fail("LAND surface falls into or too near the MEADOW relief (minimum clearance %.5f)." % minimum_land_clearance)
+		return
+	if not _land_top_is_flat(land.mesh as ArrayMesh):
+		_fail("LAND top is no longer one flat planting plane.")
+		return
+	if not _land_palette_has_uniform_top_and_faceted_slope(land.mesh as ArrayMesh):
+		_fail("LAND must keep one uniform flat top palette and varied polygonal slope faces.")
+		return
 	var material := water.material_override as ShaderMaterial
 	if material == null or float(material.get_shader_parameter("foam_shoreline_length")) <= 0.0:
 		_fail("Pilot water lost its per-prefab shoreline material data.")
@@ -68,6 +93,9 @@ func _smoke() -> void:
 			return
 		if absf(placement.local_position.y - 0.190) > EPSILON or not _is_covered(land.mesh as ArrayMesh, Vector2(placement.local_position.x, placement.local_position.z)):
 			_fail("Pilot placed a plant off the Blender LAND surface.")
+			return
+		if _is_covered(water.mesh as ArrayMesh, Vector2(placement.local_position.x, placement.local_position.z)):
+			_fail("Pilot placed a plant inside the polygonal WATER tongue.")
 			return
 
 	for decoration in tile.get_node(^"Decorations").get_children():
@@ -105,7 +133,7 @@ func _smoke() -> void:
 	):
 		return
 
-	print("FREE_ASSET_TILE_TERRAIN_PASS: Blender V2 bake, KayKit MEADOW-only decorations, canonical anchors, LAND mask, deterministic plants, UV2 water, and WATER/LAND/EMPTY prefab seams are valid.")
+	print("FREE_ASSET_TILE_TERRAIN_PASS: uniform flat LAND top, faceted broad polygon slopes, MEADOW-clearing LAND-fed WATER tongue, KayKit MEADOW-only decorations, deterministic plants, UV2 water, and WATER/LAND/EMPTY seams are valid. minimum_clearance water=%.5f land=%.5f" % [minimum_water_clearance, minimum_land_clearance])
 	quit()
 
 
@@ -165,7 +193,7 @@ func _signatures_match(first: Array[Vector2], second: Array[Vector2]) -> bool:
 func _is_covered(mesh: ArrayMesh, probe: Vector2) -> bool:
 	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
 	for index in range(0, triangle_indices.size(), 3):
 		var a := vertices[triangle_indices[index]]
@@ -174,6 +202,100 @@ func _is_covered(mesh: ArrayMesh, probe: Vector2) -> bool:
 		if _point_in_triangle(probe, Vector2(a.x, a.z), Vector2(b.x, b.z), Vector2(c.x, c.z)):
 			return true
 	return false
+
+
+func _minimum_surface_meadow_clearance(surface: ArrayMesh, meadow: ArrayMesh) -> float:
+	var minimum_clearance := INF
+	var arrays := surface.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(vertices.size()))
+	for index in range(0, indices.size(), 3):
+		var a := vertices[indices[index]]
+		var b := vertices[indices[index + 1]]
+		var c := vertices[indices[index + 2]]
+		for sample in [a, b, c, (a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5, (a + b + c) / 3.0]:
+			var meadow_height := _surface_height_at(meadow, Vector2(sample.x, sample.z))
+			if meadow_height < INF:
+				minimum_clearance = minf(minimum_clearance, sample.y - meadow_height)
+	return minimum_clearance
+
+
+func _land_top_is_flat(land: ArrayMesh) -> bool:
+	var arrays := land.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(vertices.size()))
+	var found_top := false
+	for index in range(0, indices.size(), 3):
+		var a := vertices[indices[index]]
+		var b := vertices[indices[index + 1]]
+		var c := vertices[indices[index + 2]]
+		var is_top := (
+			absf(a.y - LAND_SURFACE_HEIGHT) <= EPSILON
+			and absf(b.y - LAND_SURFACE_HEIGHT) <= EPSILON
+			and absf(c.y - LAND_SURFACE_HEIGHT) <= EPSILON
+		)
+		if not is_top:
+			continue
+		found_top = true
+		if absf((b - a).cross(c - a).normalized().y) < 0.98:
+			return false
+	return found_top
+
+
+func _land_palette_has_uniform_top_and_faceted_slope(land: ArrayMesh) -> bool:
+	var arrays := land.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	if uv.size() != vertices.size() or uv.is_empty():
+		return false
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
+	var top_tones := {}
+	var slope_tones := {}
+	for index in range(0, triangle_indices.size(), 3):
+		var a_index := triangle_indices[index]
+		var b_index := triangle_indices[index + 1]
+		var c_index := triangle_indices[index + 2]
+		var a := vertices[a_index]
+		var b := vertices[b_index]
+		var c := vertices[c_index]
+		var normal := (b - a).cross(c - a)
+		if normal.length_squared() <= EPSILON * EPSILON:
+			continue
+		var is_top := (
+			absf(a.y - LAND_SURFACE_HEIGHT) <= EPSILON
+			and absf(b.y - LAND_SURFACE_HEIGHT) <= EPSILON
+			and absf(c.y - LAND_SURFACE_HEIGHT) <= EPSILON
+		)
+		for vertex_index in [a_index, b_index, c_index]:
+			if is_top:
+				if absf(normal.normalized().y) < 0.98:
+					return false
+				if absf(vertices[vertex_index].y - LAND_SURFACE_HEIGHT) > EPSILON:
+					return false
+				top_tones[int(roundf(uv[vertex_index].x * 100.0))] = true
+			else:
+				slope_tones[int(roundf(uv[vertex_index].x * 100.0))] = true
+	return top_tones.size() == 1 and slope_tones.size() >= 4
+
+
+func _surface_height_at(mesh: ArrayMesh, probe: Vector2) -> float:
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(vertices.size()))
+	for index in range(0, indices.size(), 3):
+		var a := vertices[indices[index]]
+		var b := vertices[indices[index + 1]]
+		var c := vertices[indices[index + 2]]
+		var denominator := (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z)
+		if absf(denominator) <= EPSILON:
+			continue
+		var weight_a := ((b.z - c.z) * (probe.x - c.x) + (c.x - b.x) * (probe.y - c.z)) / denominator
+		var weight_b := ((c.z - a.z) * (probe.x - c.x) + (a.x - c.x) * (probe.y - c.z)) / denominator
+		var weight_c := 1.0 - weight_a - weight_b
+		if weight_a >= -EPSILON and weight_b >= -EPSILON and weight_c >= -EPSILON:
+			return a.y * weight_a + b.y * weight_b + c.y * weight_c
+	return INF
 
 
 func _point_in_triangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2) -> bool:
