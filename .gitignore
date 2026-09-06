@@ -23,4 +23,13 @@ artifacts/
 .workbuddy-ai/
 
 # Third-party source assets (large originals; exported GLBs live in art/models/)
-art/source/
+# Keep originals ignored by default, except the pinned complete Kenney archive.
+art/source/*
+!art/source/kenney/
+art/source/kenney/*
+!art/source/kenney/nature_kit/
+art/source/kenney/nature_kit/*
+!art/source/kenney/nature_kit/kenney_nature-kit.zip
+
+# Godot regenerates the GLB import descriptors for the complete art library.
+art/models/kenney/nature_kit/*.glb.import
