@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://art/models/plants/kenney/plant_flatTall.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://art/models/plants/kenney/plant_bush.glb" id="2_model"]
 
 [sub_resource type="StandardMaterial3D" id="MatWithered"]
 resource_local_to_scene = true
@@ -11,19 +11,20 @@ roughness = 1.0
 [node name="SoilHerb" type="Node3D"]
 script = ExtResource("1_script")
 species_id = &"soil_herb"
-owner_color_mesh_name = &"plant_flatTall"
+owner_color_mesh_name = &"plant_bush"
 owner_color_surface_index = 0
 withered_material = SubResource("MatWithered")
 
 [node name="GrowingParts" type="Node3D" parent="."]
 
-[node name="KenneyPlantFlatTall" parent="GrowingParts" instance=ExtResource("2_model")]
-scale = Vector3(2, 2, 2)
+[node name="KenneyPlantBush" parent="GrowingParts" instance=ExtResource("2_model")]
+position = Vector3(0, 0.07, 0)
+scale = Vector3(1.4, 1.4, 1.4)
 
 [node name="WitheredParts" type="Node3D" parent="."]
 visible = false
 
-[node name="KenneyPlantFlatTallWilted" parent="WitheredParts" instance=ExtResource("2_model")]
-position = Vector3(0.04, 0.02, 0)
+[node name="KenneyPlantBushWilted" parent="WitheredParts" instance=ExtResource("2_model")]
+position = Vector3(0.04, 0.271006, 0)
 rotation_degrees = Vector3(-10, 0, 58)
-scale = Vector3(1.7, 1.7, 1.7)
+scale = Vector3(1.2, 1.2, 1.2)

@@ -1,0 +1,71 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/free_asset_tile_seam_study.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/free_asset_v2/north_east_land_south_water_free_v2.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentSeams"]
+background_mode = 1
+background_color = Color(0.035, 0.050, 0.042, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.62, 0.70, 0.64, 1)
+ambient_light_energy = 0.56
+ssao_enabled = true
+ssao_radius = 0.72
+ssao_intensity = 1.2
+
+[sub_resource type="StandardMaterial3D" id="TableMaterial"]
+albedo_color = Color(0.095, 0.125, 0.105, 1)
+roughness = 0.84
+
+[sub_resource type="BoxMesh" id="TableMesh"]
+material = SubResource("TableMaterial")
+size = Vector3(17, 0.3, 14)
+
+[node name="FreeAssetV2ThreeSeams" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentSeams")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-54, -31, 0)
+light_color = Color(1, 0.92, 0.80, 1)
+light_energy = 1.25
+shadow_enabled = true
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.47, 1.2)
+mesh = SubResource("TableMesh")
+
+[node name="Center" parent="." instance=ExtResource("2_tile")]
+
+[node name="WaterMate" parent="." instance=ExtResource("2_tile")]
+position = Vector3(0, 0, 4.9)
+rotation = Vector3(0, 3.1415927, 0)
+
+[node name="LandMate" parent="." instance=ExtResource("2_tile")]
+position = Vector3(4.9, 0, 0)
+rotation = Vector3(0, 3.1415927, 0)
+
+[node name="EmptyMate" parent="." instance=ExtResource("2_tile")]
+position = Vector3(-4.9, 0, 0)
+rotation = Vector3(0, 3.1415927, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(8.6, 12.4, 13.8)
+current = true
+projection = 1
+size = 15.6
+near = 0.1
+far = 50.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="UI"]
+offset_left = 28.0
+offset_top = 24.0
+offset_right = 850.0
+offset_bottom = 64.0
+theme_override_colors/font_color = Color(0.92, 0.98, 0.93, 1)
+theme_override_font_sizes/font_size = 24
+text = "免费素材 V2 拼接验收 · 左 EMPTY / 右 LAND / 下 WATER"

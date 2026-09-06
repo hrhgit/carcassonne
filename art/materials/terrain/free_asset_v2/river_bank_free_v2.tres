@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Free V2 River Bank"
+cull_mode = 2
+albedo_color = Color(0.3, 0.29, 0.235, 1)
+roughness = 0.88

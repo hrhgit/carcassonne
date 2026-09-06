@@ -218,7 +218,7 @@ func _build_tuning_panel() -> void:
 	box.add_child(hint)
 
 	species_select = OptionButton.new()
-	species_select.add_item("草 · plant_flatTall")
+	species_select.add_item("草 · plant_bush")
 	species_select.set_item_metadata(0, &"soil_herb")
 	species_select.add_item("花 · flower_redC")
 	species_select.set_item_metadata(1, &"soil_flower")

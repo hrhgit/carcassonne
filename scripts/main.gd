@@ -9,6 +9,7 @@ const WATER_NETWORK_RENDERER_SCRIPT := preload("res://scripts/water_network_rend
 
 const GAME_SMOKE_ARGUMENT := "--game-smoke"
 const CAPTURE_ARGUMENT := "--capture-game"
+const PLANTING_CAPTURE_ARGUMENT := "--capture-planting"
 
 # One grid cell spans one fixed 3D tile (4.9 world units). NORTH faces -Z,
 # EAST +X, SOUTH +Z, WEST -X, matching the authored prefab edge order.
@@ -26,14 +27,20 @@ const CAMERA_DISTANCE_MAX := 32.0
 const CAMERA_PAN_STEP := 4.9
 const CAMERA_ZOOM_STEP := 1.2
 
+# 正交相机缩放参数（size 为竖直方向可见高度的一半）
+const CAMERA_ORTHO_SIZE := 16.0
+const CAMERA_ORTHO_SIZE_MIN := 8.0
+const CAMERA_ORTHO_SIZE_MAX := 30.0
+const CAMERA_ORTHO_ZOOM_STEP := 1.2
+
 # 平移参数：logical 像素 = cell.x * CELL_SIZE
 const PAN_KEY_STEP := 78.0 * 3.0
 const PAN_WHEEL_STEP := 78.0 * 1.5
 const PAN_LERP := 14.0
 const SEARCH_RADIUS := 24
 
-# §7 三个阶段按钮
-enum MenuMode { NONE, PLANT, EXPAND }
+# §7 动作窗口：主动种植或跳过；植物扩张由放牌事件自动触发。
+enum MenuMode { NONE, PLANT }
 
 @onready var tile_catalog: TileCatalog = $TileCatalog
 @onready var camera: Camera3D = $Camera3D
@@ -48,10 +55,13 @@ var current_rotation := 0
 var placed_tile_nodes: Dictionary = {}   # cell -> Node3D (prefab instance)
 var preview_node: Node3D = null
 var hover_highlight: MeshInstance3D = null
+var land_outline_nodes: Array[Node3D] = []
+var land_outline_signature := ""
 
 var has_hovered_cell := false
 var hovered_cell := Vector2i.ZERO
 var preview_is_valid := false
+var preview_border: Node3D = null
 
 var camera_target := Vector3.ZERO
 var camera_distance := CAMERA_DISTANCE
@@ -61,7 +71,6 @@ var toast_time := 0.0
 
 var menu_mode := MenuMode.NONE
 var menu_cell := Vector2i.ZERO
-var menu_source_plant_id := -1
 var menu_species_targets: Array = []
 
 var game_over_result: Dictionary = {}
@@ -88,6 +97,8 @@ func _ready() -> void:
 
 	board_state = BOARD_STATE_SCRIPT.new()
 	water_network_renderer = WATER_NETWORK_RENDERER_SCRIPT.new() as WaterNetworkRenderer3D
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = CAMERA_ORTHO_SIZE
 	_build_highlight_quad()
 	_build_hud()
 	_update_camera()
@@ -97,6 +108,8 @@ func _ready() -> void:
 	var user_arguments := OS.get_cmdline_user_args()
 	if GAME_SMOKE_ARGUMENT in user_arguments:
 		call_deferred("_run_game_smoke")
+	elif PLANTING_CAPTURE_ARGUMENT in user_arguments:
+		call_deferred("_capture_planting_interaction_preview")
 	elif CAPTURE_ARGUMENT in user_arguments:
 		call_deferred("_capture_game_preview")
 
@@ -125,12 +138,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera_distance = clampf(camera_distance - CAMERA_ZOOM_STEP, CAMERA_DISTANCE_MIN, CAMERA_DISTANCE_MAX)
+			camera.size = clampf(camera.size - CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
 			_update_camera()
 			get_viewport().set_input_as_handled()
 			return
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera_distance = clampf(camera_distance + CAMERA_ZOOM_STEP, CAMERA_DISTANCE_MIN, CAMERA_DISTANCE_MAX)
+			camera.size = clampf(camera.size + CAMERA_ORTHO_ZOOM_STEP, CAMERA_ORTHO_SIZE_MIN, CAMERA_ORTHO_SIZE_MAX)
 			_update_camera()
 			get_viewport().set_input_as_handled()
 			return
@@ -155,6 +168,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event.button_index == MOUSE_BUTTON_RIGHT:
+		var now_sec := float(Time.get_ticks_msec()) / 1000.0
+		if int(board_state.phase) == BoardState.Phase.ACTION_WINDOW \
+				and now_sec - last_right_click_time <= RIGHT_DOUBLE_CLICK_INTERVAL:
+			# 双击右键：地块放置完成后快速结束回合
+			last_right_click_time = -1.0
+			_on_end_turn_button()
+			get_viewport().set_input_as_handled()
+			return
+		last_right_click_time = now_sec
 		_rotate_current_tile()
 		get_viewport().set_input_as_handled()
 		return
@@ -170,6 +192,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 var is_panning := false
 
+# 双击右键结束回合（仅动作窗口阶段生效）
+const RIGHT_DOUBLE_CLICK_INTERVAL := 0.35
+var last_right_click_time := -1.0
+
 
 # === 相机 ===
 
@@ -184,8 +210,8 @@ func _update_camera() -> void:
 
 
 func _pan_camera_by_screen(screen_delta: Vector2) -> void:
-	# 把屏幕位移换算成世界平面位移（近似）
-	var scale := camera_distance / maxf(float(get_viewport().size.y), 1.0) * 2.2
+	# 把屏幕位移换算成世界平面位移（近似）；正交下按 size 换算
+	var scale := camera.size / maxf(float(get_viewport().size.y), 1.0) * 2.0
 	var right := Vector3(cos(CAMERA_AZIMUTH), 0.0, -sin(CAMERA_AZIMUTH))
 	var forward := Vector3(-sin(CAMERA_AZIMUTH), 0.0, -cos(CAMERA_AZIMUTH))
 	camera_target += (-right * screen_delta.x + forward * screen_delta.y) * scale
@@ -289,25 +315,23 @@ func _sync_preview() -> void:
 	preview_node.visible = true
 	preview_node.position = _cell_world_position(hovered_cell)
 	preview_node.rotation.y = -float(board_state.tile_to_place.visual_rotation_quarters + current_rotation) * PI * 0.5
-	var tint := Color(0.76, 1.0, 0.84, 0.60) if preview_is_valid else Color(1.0, 0.49, 0.42, 0.55)
-	_modulate_instances(preview_node, tint)
-
-
-func _modulate_instances(root: Node3D, color: Color) -> void:
-	for mesh_instance in root.find_children("*", "MeshInstance3D", true, false):
-		var mi: MeshInstance3D = mesh_instance
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = color
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		mi.material_override = mat
+	# 预览不覆盖颜色，只保留地块原貌；合法/非法仅由边框标示。
+	if preview_border != null:
+		var border_color := Color(0.35, 0.95, 0.55, 1.0) if preview_is_valid else Color(0.95, 0.30, 0.25, 1.0)
+		for mi in preview_border.find_children("*", "MeshInstance3D", true, false):
+			var bmat := StandardMaterial3D.new()
+			bmat.albedo_color = border_color
+			bmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			bmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			bmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+			(mi as MeshInstance3D).material_override = bmat
 
 
 func _refresh_preview_piece() -> void:
 	if preview_node != null:
 		preview_node.queue_free()
 		preview_node = null
+	preview_border = null
 	if board_state == null or board_state.tile_to_place == null:
 		return
 	var definition: TileDefinition = board_state.tile_to_place
@@ -320,15 +344,44 @@ func _refresh_preview_piece() -> void:
 	preview_node.visible = false
 	board_root.add_child(preview_node)
 	preview_node.call("set_growth_state", 0)
+	preview_border = _build_preview_border()
+	preview_node.add_child(preview_border)
 	_sync_preview()
 
 
+func _build_preview_border() -> Node3D:
+	# 沿地块边缘的一圈细描边，颜色叠加变轻后仍能一眼看出合法(绿)/非法(红)。
+	var border := Node3D.new()
+	border.name = "PreviewBorder"
+	var thickness := 0.06
+	var half := TILE_SIZE * 0.5
+	var y := HIGHLIGHT_Y
+	var edges := [
+		Vector3(TILE_SIZE, thickness, thickness),
+		Vector3(TILE_SIZE, thickness, thickness),
+		Vector3(thickness, thickness, TILE_SIZE),
+		Vector3(thickness, thickness, TILE_SIZE),
+	]
+	var positions := [
+		Vector3(0.0, y, -half),
+		Vector3(0.0, y, half),
+		Vector3(-half, y, 0.0),
+		Vector3(half, y, 0.0),
+	]
+	for i in edges.size():
+		var box := BoxMesh.new()
+		box.size = edges[i]
+		var mi := MeshInstance3D.new()
+		mi.mesh = box
+		mi.position = positions[i]
+		border.add_child(mi)
+	return border
+
+
 func _update_hover(screen_position: Vector2) -> void:
-	if int(board_state.phase) != BoardState.Phase.PLACE:
-		if has_hovered_cell:
-			has_hovered_cell = false
-			hover_highlight.visible = false
-			_sync_preview()
+	var phase := int(board_state.phase)
+	if phase != BoardState.Phase.PLACE and phase != BoardState.Phase.ACTION_WINDOW:
+		_clear_hover_visuals()
 		return
 	var hit := _screen_to_cell(screen_position)
 	var new_has_hover := not hit.is_empty()
@@ -339,17 +392,137 @@ func _update_hover(screen_position: Vector2) -> void:
 		return
 	has_hovered_cell = new_has_hover
 	hovered_cell = new_cell
-	if has_hovered_cell:
-		hover_highlight.position = _cell_world_position(hovered_cell)
-		var valid := false
-		if board_state.tile_to_place != null and not board_state.has_tile(hovered_cell):
-			valid = bool(board_state.can_place(board_state.tile_to_place, hovered_cell, current_rotation)["valid"])
-		hover_highlight.visible = true
-		var mat := hover_highlight.mesh.material as StandardMaterial3D
-		mat.albedo_color = Color(0.45, 0.90, 0.60, 0.35) if valid else Color(1.0, 0.49, 0.42, 0.40)
+	if phase == BoardState.Phase.PLACE:
+		_update_place_hover()
 	else:
-		hover_highlight.visible = false
+		_update_action_hover()
 	_sync_preview()
+
+
+func _update_place_hover() -> void:
+	_clear_connected_land_outline()
+	if not has_hovered_cell:
+		hover_highlight.visible = false
+		return
+	hover_highlight.position = _cell_world_position(hovered_cell)
+	var valid := false
+	if board_state.tile_to_place != null and not board_state.has_tile(hovered_cell):
+		valid = bool(board_state.can_place(board_state.tile_to_place, hovered_cell, current_rotation)["valid"])
+	hover_highlight.visible = true
+	var mat := hover_highlight.mesh.material as StandardMaterial3D
+	mat.albedo_color = Color(0.45, 0.90, 0.60, 0.35) if valid else Color(1.0, 0.49, 0.42, 0.40)
+
+
+func _update_action_hover() -> void:
+	hover_highlight.visible = false
+	if not has_hovered_cell or not board_state.has_tile(hovered_cell):
+		_clear_connected_land_outline()
+		return
+	var connected_cells: Array[Vector2i] = board_state.connected_land_cells_at(hovered_cell)
+	if connected_cells.is_empty():
+		_clear_connected_land_outline()
+		return
+	var check: Dictionary = board_state.can_plant_any_species_at(hovered_cell, board_state.active_player)
+	var outline_color := Color("#b8f47d") if bool(check["valid"]) else Color("#f0b46c")
+	_show_connected_land_outline(connected_cells, outline_color)
+
+
+func _clear_hover_visuals() -> void:
+	if has_hovered_cell:
+		has_hovered_cell = false
+	hover_highlight.visible = false
+	_clear_connected_land_outline()
+	_sync_preview()
+
+
+# 只根据各个已实例化预制件自带的 planting_masks 生成交互描边。
+# 它是瞬时提示层，不改写地块网格、端口或基础材质。
+func _show_connected_land_outline(cells: Array[Vector2i], color: Color) -> void:
+	var signature := "%s|%s" % [color.to_html(true), str(cells)]
+	if signature == land_outline_signature:
+		return
+	_clear_connected_land_outline()
+	land_outline_signature = signature
+	for cell in cells:
+		var tile: Node3D = placed_tile_nodes.get(cell, null)
+		if tile == null:
+			continue
+		var layer := Node3D.new()
+		layer.name = "ConnectedLandOutline"
+		tile.add_child(layer)
+		land_outline_nodes.append(layer)
+		var artwork := tile as TileArtwork3D
+		if artwork != null and not artwork.planting_masks.is_empty():
+			for mask in artwork.planting_masks:
+				if mask == null or not mask.is_valid():
+					continue
+				var outline := _make_land_mask_outline(mask, color)
+				if outline != null:
+					layer.add_child(outline)
+		else:
+			var fallback := _make_fallback_land_outline(color)
+			if fallback != null:
+				layer.add_child(fallback)
+
+
+func _clear_connected_land_outline() -> void:
+	for node in land_outline_nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	land_outline_nodes.clear()
+	land_outline_signature = ""
+
+
+func _make_land_mask_outline(mask: PlantingMask3D, color: Color) -> MeshInstance3D:
+	return _make_polygon_outline(mask.boundary, mask.surface_height + 0.032, color)
+
+
+func _make_fallback_land_outline(color: Color) -> MeshInstance3D:
+	var half := TILE_SIZE * 0.5 - 0.14
+	var boundary := PackedVector2Array([
+		Vector2(-half, -half), Vector2(half, -half),
+		Vector2(half, half), Vector2(-half, half),
+	])
+	return _make_polygon_outline(boundary, HIGHLIGHT_Y + 0.02, color)
+
+
+func _make_polygon_outline(boundary: PackedVector2Array, height: float, color: Color) -> MeshInstance3D:
+	if boundary.size() < 3:
+		return null
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half_width := 0.035
+	for index in range(boundary.size()):
+		var start := boundary[index]
+		var finish := boundary[(index + 1) % boundary.size()]
+		var direction := finish - start
+		if direction.length_squared() < 0.000001:
+			continue
+		var side := Vector2(-direction.y, direction.x).normalized() * half_width
+		var a := Vector3(start.x + side.x, height, start.y + side.y)
+		var b := Vector3(start.x - side.x, height, start.y - side.y)
+		var c := Vector3(finish.x - side.x, height, finish.y - side.y)
+		var d := Vector3(finish.x + side.x, height, finish.y + side.y)
+		tool.add_vertex(a)
+		tool.add_vertex(b)
+		tool.add_vertex(c)
+		tool.add_vertex(a)
+		tool.add_vertex(c)
+		tool.add_vertex(d)
+	var mesh := tool.commit()
+	if mesh == null:
+		return null
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = color
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.no_depth_test = true
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	return instance
 
 
 func _refresh_tile_growth(cell: Vector2i) -> void:
@@ -380,13 +553,20 @@ func _refresh_tile_growth(cell: Vector2i) -> void:
 
 
 func _refresh_water_network() -> void:
-	if water_network_renderer != null:
-		water_network_renderer.refresh(board_state, placed_tile_nodes)
+	if water_network_renderer == null:
+		return
+	var refresh_result: Dictionary = water_network_renderer.refresh(board_state, placed_tile_nodes)
+	# 棋盘上存在供水网络时循环播放水流环境音，网络消失时停止。
+	if int(refresh_result.get("network_count", 0)) > 0:
+		Sfx.play_loop("water_flow_loop", -9.0)
+	else:
+		Sfx.stop_loop("water_flow_loop")
 
 
 # === §7 流程 ===
 
 func _start_new_game() -> void:
+	_clear_connected_land_outline()
 	for tile_node in placed_tile_nodes.values():
 		if is_instance_valid(tile_node):
 			tile_node.queue_free()
@@ -394,6 +574,7 @@ func _start_new_game() -> void:
 	if preview_node != null:
 		preview_node.queue_free()
 		preview_node = null
+	preview_border = null
 
 	deck = tile_catalog.build_deck()
 	deck_index = 0
@@ -405,6 +586,7 @@ func _start_new_game() -> void:
 	_add_placed_tile_visual(Vector2i.ZERO)
 
 	_set_toast("新对局 · 玩家 1 先行 · 点「抽牌」开始", 3.0)
+	Sfx.play("turn_start")
 	_refresh_hud()
 	call_deferred("_center_camera_on", Vector2i.ZERO)
 
@@ -413,6 +595,7 @@ func _rotate_current_tile() -> void:
 	if int(board_state.phase) != BoardState.Phase.PLACE or board_state.tile_to_place == null:
 		return
 	current_rotation = int(posmod(current_rotation + 1, 4))
+	Sfx.play("tile_rotate")
 	_refresh_preview_piece()
 	_set_toast("旋转至 %d°" % (current_rotation * 90), 1.2)
 	_refresh_hud()
@@ -432,7 +615,9 @@ func _on_deal_button() -> void:
 	current_rotation = 0
 	has_hovered_cell = false
 	hover_highlight.visible = false
+	_clear_connected_land_outline()
 	_refresh_preview_piece()
+	Sfx.play("tile_pickup")
 	_set_toast("玩家 %d 抽到地块 · 进入放置阶段" % (board_state.active_player + 1), 2.2)
 	_refresh_hud()
 
@@ -449,7 +634,7 @@ func _on_finish_place_button() -> void:
 		_set_toast("完成放置失败：%s" % result["reason"], 2.5)
 		return
 	_clear_menu()
-	_set_toast("进入动作窗口 · 可种植物 / 扩张 / 跳过", 2.5)
+	_set_toast("进入动作窗口 · 悬停查看连通土地，左键点空土地种植", 2.5)
 	_refresh_hud()
 
 
@@ -458,6 +643,7 @@ func _on_end_turn_button() -> void:
 	if phase == BoardState.Phase.GAME_OVER:
 		if game_over_result.is_empty():
 			game_over_result = board_state.run_end_game(PLANT_ENGINE_SCRIPT)
+			_play_end_game_sounds(game_over_result)
 		_refresh_hud()
 		return
 	if phase != BoardState.Phase.ACTION_WINDOW:
@@ -469,13 +655,16 @@ func _on_end_turn_button() -> void:
 	if not bool(result["valid"]):
 		_set_toast("回合结算失败：%s" % result["reason"], 2.5)
 		return
+	_play_settle_sounds(result.get("plant_analysis", null))
 	deck_index = next_deck_idx
 	current_rotation = 0
 	_clear_menu()
+	_clear_connected_land_outline()
 	_refresh_all_growth()
 	if deck_is_empty:
 		_set_toast("牌堆已空 · 玩家 %d 终局 · 点「查看终局」" % (board_state.active_player + 1), 3.0)
 	else:
+		Sfx.play("turn_start")
 		_set_toast("回合已结算 · 玩家 %d 准备抽牌" % (board_state.active_player + 1), 2.2)
 	_refresh_hud()
 
@@ -508,37 +697,41 @@ func _try_place_current_tile(cell: Vector2i) -> void:
 	var result: Dictionary = board_state.commit_placement(cell, current_rotation)
 	if not bool(result["valid"]):
 		_set_toast("无法放置：%s" % result["reason"], 2.6)
+		Sfx.play("tile_invalid")
 		return
+	Sfx.play("tile_place")
+	if _definition_carries_water(tile, current_rotation):
+		Sfx.play("water_splash", -4.0)
 	_add_placed_tile_visual(cell)
+	var automatic_expansion: Dictionary = result.get("automatic_expansion", {})
+	var species_conflict: Dictionary = result.get("species_conflict", {})
+	var evicted_ids: Array = species_conflict.get("evicted_plant_ids", [])
+	if not automatic_expansion.is_empty():
+		Sfx.play("plant_grow")
+	if not automatic_expansion.is_empty() or not evicted_ids.is_empty():
+		_refresh_all_growth()
 	has_hovered_cell = false
 	hover_highlight.visible = false
+	_clear_connected_land_outline()
 	current_rotation = 0
 	_refresh_preview_piece()
 	_center_camera_on(cell)
-	_set_toast("已放置 · 进入动作窗口（种植物 / 扩张 / 跳过）", 2.4)
+	if automatic_expansion.is_empty() and evicted_ids.is_empty():
+		_set_toast("已放置 · 悬停查看连通土地，左键点空土地种植", 2.8)
+	elif not automatic_expansion.is_empty():
+		_set_toast("已放置 · 邻接植物自动扩张；悬停查看连通土地", 2.8)
+	else:
+		_set_toast("已放置 · 连通区域发生物种驱逐，种子已退还", 2.8)
 	_refresh_hud()
+	# 放牌点击所在的位置就是最自然的第一个种植候选；无需等用户额外移动一次鼠标。
+	call_deferred("_update_hover", get_viewport().get_mouse_position())
 
 
 func _try_open_action_menu_for(cell: Vector2i) -> void:
 	if not board_state.has_tile(cell):
 		_set_toast("该位置尚未放地块。", 2.0)
 		return
-	var source_plant: Plant = _find_active_plant_at(cell, board_state.active_player)
-	if source_plant != null:
-		_open_expand_menu(cell, source_plant)
-		return
-	if board_state.is_turn_placed(cell):
-		_open_plant_menu(cell)
-		return
-	_set_toast("该格不可种 / 扩：点本回合新放的格种，或点自己已有植物的格扩。", 2.8)
-
-
-func _find_active_plant_at(cell: Vector2i, owner: int) -> Plant:
-	for plant_id in board_state.plants:
-		var p: Plant = board_state.plants[plant_id]
-		if p.tile_cell == cell and int(p.owner) == owner:
-			return p
-	return null
+	_open_plant_menu(cell)
 
 
 func _open_plant_menu(cell: Vector2i) -> void:
@@ -558,36 +751,9 @@ func _open_plant_menu(cell: Vector2i) -> void:
 		return
 	menu_mode = MenuMode.PLANT
 	menu_cell = cell
-	menu_source_plant_id = -1
 	menu_species_targets.clear()
 	for s in species_with_seeds:
 		menu_species_targets.append(int(s))
-	_build_action_menu()
-
-
-func _open_expand_menu(source_cell: Vector2i, source_plant: Plant) -> void:
-	var owner: int = board_state.active_player
-	var bag: Dictionary = board_state.seed_inventory.get(owner, {})
-	var species: int = int(source_plant.species)
-	var seed_count: int = int(bag.get(species, 0))
-	if seed_count <= 0:
-		_set_toast("「%s」种子已耗尽，无法扩张。" % PLANT_SCRIPT.species_label(species), 2.5)
-		return
-	var candidates: Array = []
-	for direction in range(4):
-		var target_cell: Vector2i = BoardState.neighbour_for_edge(source_cell, direction)
-		var check: Dictionary = board_state.can_expand_to(target_cell, species, owner, int(source_plant.id))
-		if bool(check["valid"]):
-			candidates.append(target_cell)
-	if candidates.is_empty():
-		_set_toast("源植物的土地块内暂无可扩格。", 2.0)
-		return
-	menu_mode = MenuMode.EXPAND
-	menu_cell = source_cell
-	menu_source_plant_id = int(source_plant.id)
-	menu_species_targets.clear()
-	for c in candidates:
-		menu_species_targets.append(c)
 	_build_action_menu()
 
 
@@ -597,27 +763,26 @@ func _handle_menu_choice(index: int) -> void:
 		var species: int = int(menu_species_targets[index])
 		var result: Dictionary = board_state.plant(menu_cell, species, owner)
 		if bool(result["valid"]):
-			_refresh_tile_growth(menu_cell)
-			_set_toast("已种 %s（种子 −1）" % PLANT_SCRIPT.species_label(species), 2.0)
+			Sfx.play("plant_seed")
+			var species_conflict: Dictionary = result.get("species_conflict", {})
+			var evicted_ids: Array = species_conflict.get("evicted_plant_ids", [])
+			if evicted_ids.is_empty():
+				_refresh_tile_growth(menu_cell)
+				_set_toast("已种 %s（种子 −1）" % PLANT_SCRIPT.species_label(species), 2.0)
+			else:
+				_refresh_all_growth()
+				_set_toast("已种 %s · 低优先级植物已被驱逐并退种" % PLANT_SCRIPT.species_label(species), 2.8)
 		else:
+			Sfx.play("tile_invalid", -6.0)
 			_set_toast("种植失败：%s" % result["reason"], 2.5)
-	elif menu_mode == MenuMode.EXPAND:
-		var target_cell: Vector2i = menu_species_targets[index]
-		var source_plant: Plant = board_state.plants[menu_source_plant_id]
-		var result: Dictionary = board_state.expand(target_cell, int(source_plant.species), owner, menu_source_plant_id)
-		if bool(result["valid"]):
-			_refresh_tile_growth(target_cell)
-			_set_toast("已扩张到 (%d,%d)" % [target_cell.x, target_cell.y], 2.0)
-		else:
-			_set_toast("扩张失败：%s" % result["reason"], 2.5)
 	_clear_menu()
+	_clear_connected_land_outline()
 	_refresh_hud()
 
 
 func _clear_menu() -> void:
 	menu_mode = MenuMode.NONE
 	menu_cell = Vector2i.ZERO
-	menu_source_plant_id = -1
 	menu_species_targets.clear()
 	if menu_panel != null:
 		menu_panel.visible = false
@@ -626,61 +791,79 @@ func _clear_menu() -> void:
 # === HUD ===
 
 func _build_hud() -> void:
-	var font: Font = UI_FONT_SCRIPT.ui_font()
 	var ui := CanvasLayer.new()
 	ui.name = "UI"
 	add_child(ui)
 
+	# 信息面板（右上：玩家信息 + 操作按钮）
 	var panel := PanelContainer.new()
 	panel.name = "InfoPanel"
-	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	panel.position = Vector2(20, 20)
-	panel.custom_minimum_size = Vector2(340, 0)
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	# 显式固定右上偏移并强制向左生长，避免内容撑大后越出屏幕右侧
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = -388
+	panel.offset_right = -16
+	panel.offset_top = 16
+	panel.offset_bottom = 16
+	panel.custom_minimum_size = Vector2(372, 0)
+	panel.add_theme_stylebox_override("panel", _make_panel_style())
 	ui.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	panel.add_child(box)
 
-	label_title = _make_label("碧水沃野 · 3D", 24, Color("#e7f1cf"))
+	label_title = _make_label("碧水沃野 · 3D", 22, Color("#e7f1cf"))
+	label_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(label_title)
-	label_status = _make_label("", 15, Color("#cde9a2"))
+	label_status = _make_label("", 14, Color("#cde9a2"))
+	label_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(label_status)
+	box.add_child(_make_separator())
+
 	label_current_tile = _make_label("", 14, Color("#eff3d2"))
 	box.add_child(label_current_tile)
 	label_seeds = _make_label("", 13, Color(0.74, 0.89, 0.78, 0.9))
 	box.add_child(label_seeds)
+	box.add_child(_make_separator())
 
-	for _i in range(2):
+	for pid in range(2):
+		var chip := PanelContainer.new()
+		chip.add_theme_stylebox_override("panel", _make_player_chip_style(pid))
 		var pl := _make_label("", 13, Color("#eff3d2"))
-		box.add_child(pl)
+		chip.add_child(pl)
+		box.add_child(chip)
 		player_row_labels.append(pl)
+	box.add_child(_make_separator())
 
-	# 按钮行（右下）
-	var button_row := HBoxContainer.new()
-	button_row.name = "ButtonRow"
-	button_row.add_theme_constant_override("separation", 8)
-
-	btn_deal = _make_button("抽  牌", _on_deal_button)
+	# 操作按钮（信息面板下方）
+	var button_grid := GridContainer.new()
+	button_grid.name = "ButtonGrid"
+	button_grid.columns = 3
+	button_grid.add_theme_constant_override("h_separation", 8)
+	button_grid.add_theme_constant_override("v_separation", 8)
+	btn_deal = _make_button("抽  牌", _on_deal_button, true)
 	btn_finish_place = _make_button("完成放置", _on_finish_place_button)
-	btn_end_turn = _make_button("回合结束", _on_end_turn_button)
+	btn_end_turn = _make_button("回合结束", _on_end_turn_button, true)
 	btn_rotate = _make_button("旋转 R", _rotate_current_tile)
 	btn_reset = _make_button("重开 N", _start_new_game)
 	for b in [btn_deal, btn_finish_place, btn_end_turn, btn_rotate, btn_reset]:
-		button_row.add_child(b)
-	ui.add_child(button_row)
-	button_row.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	button_row.set_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 12)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button_grid.add_child(b)
+	box.add_child(button_grid)
 
 	label_toast = _make_label("", 15, Color(0.95, 1.0, 0.86, 1))
 	label_toast.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	label_toast.set_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
 	label_toast.position = Vector2(20, -50)
+	label_toast.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	label_toast.add_theme_constant_override("shadow_offset", 2)
 	ui.add_child(label_toast)
 
 	menu_panel = PanelContainer.new()
 	menu_panel.name = "ActionMenu"
 	menu_panel.visible = false
 	menu_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	menu_panel.add_theme_stylebox_override("panel", _make_panel_style())
 	ui.add_child(menu_panel)
 	menu_box = VBoxContainer.new()
 	menu_box.add_theme_constant_override("separation", 6)
@@ -696,19 +879,78 @@ func _make_label(text: String, size: int, color: Color) -> Label:
 	return label
 
 
-func _make_button(text: String, callback: Callable) -> Button:
+func _make_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.13, 0.10, 0.9)
+	style.set_corner_radius_all(14)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.62, 0.82, 0.55, 0.35)
+	style.set_content_margin_all(14)
+	style.shadow_color = Color(0, 0, 0, 0.4)
+	style.shadow_size = 10
+	style.shadow_offset = Vector2(0, 4)
+	return style
+
+
+func _make_player_chip_style(player_id: int) -> StyleBoxFlat:
+	var base := _player_color(player_id)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(base.r, base.g, base.b, 0.14)
+	style.set_corner_radius_all(8)
+	style.border_width_left = 4
+	style.border_color = Color(base.r, base.g, base.b, 0.85)
+	style.content_margin_left = 10
+	style.content_margin_right = 8
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	return style
+
+
+func _make_separator() -> HSeparator:
+	var separator := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(0.62, 0.82, 0.55, 0.22)
+	line.thickness = 1
+	separator.add_theme_stylebox_override("separator", line)
+	return separator
+
+
+func _button_stylebox(bg: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.set_corner_radius_all(8)
+	style.set_border_width_all(1)
+	style.border_color = Color(bg.r + 0.14, bg.g + 0.14, bg.b + 0.12, 0.6)
+	style.set_content_margin_all(6)
+	return style
+
+
+func _make_button(text: String, callback: Callable, accent: bool = false) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.add_theme_font_override("font", UI_FONT_SCRIPT.ui_font())
 	button.add_theme_font_size_override("font_size", 15)
+	button.custom_minimum_size = Vector2(0, 36)
+	var base := Color("#3f7d4e") if accent else Color("#2c4630")
+	button.add_theme_stylebox_override("normal", _button_stylebox(base))
+	button.add_theme_stylebox_override("hover", _button_stylebox(base.lightened(0.16)))
+	button.add_theme_stylebox_override("hover_pressed", _button_stylebox(base.lightened(0.16)))
+	button.add_theme_stylebox_override("pressed", _button_stylebox(base.darkened(0.18)))
+	button.add_theme_stylebox_override("disabled", _button_stylebox(Color(base.r, base.g, base.b, 0.35)))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_color", Color("#eef6dd"))
+	button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+	button.add_theme_color_override("font_pressed_color", Color("#d8e8c4"))
+	button.add_theme_color_override("font_disabled_color", Color(0.85, 0.92, 0.8, 0.4))
 	button.pressed.connect(callback)
+	button.pressed.connect(func() -> void: Sfx.play("ui_click"))
+	button.mouse_entered.connect(func() -> void: Sfx.play("ui_hover"))
 	return button
 
 
 func _build_action_menu() -> void:
 	for child in menu_box.get_children():
 		child.queue_free()
-	var font: Font = UI_FONT_SCRIPT.ui_font()
 	if menu_mode == MenuMode.PLANT:
 		var title := _make_label("种植到 (%d,%d) · 选物种" % [menu_cell.x, menu_cell.y], 14, Color("#e7f1cf"))
 		menu_box.add_child(title)
@@ -716,14 +958,6 @@ func _build_action_menu() -> void:
 			var species: int = int(menu_species_targets[i])
 			var bag: Dictionary = board_state.seed_inventory[board_state.active_player]
 			var b := _make_button("%s（剩 %d）" % [PLANT_SCRIPT.species_label(species), int(bag.get(species, 0))], _menu_choice(i))
-			menu_box.add_child(b)
-	elif menu_mode == MenuMode.EXPAND:
-		var species: int = int(board_state.plants[menu_source_plant_id].species)
-		var title := _make_label("扩张 %s@(%d,%d) · 选目标" % [PLANT_SCRIPT.species_label(species), menu_cell.x, menu_cell.y], 14, Color("#e7f1cf"))
-		menu_box.add_child(title)
-		for i in range(menu_species_targets.size()):
-			var target: Vector2i = menu_species_targets[i]
-			var b := _make_button("→ (%d,%d)" % [target.x, target.y], _menu_choice(i))
 			menu_box.add_child(b)
 	menu_panel.visible = true
 
@@ -747,7 +981,9 @@ func _refresh_hud() -> void:
 
 	for pid in range(2):
 		var bag: Dictionary = board_state.seed_inventory.get(pid, {})
-		player_row_labels[pid].text = "P%d · 已放 %d · 草 %d · 花 %d · 树 %d" % [
+		var active_mark := "▶ " if pid == board_state.active_player else "　"
+		player_row_labels[pid].text = "%sP%d · 已放 %d · 草 %d · 花 %d · 树 %d" % [
+			active_mark,
 			pid + 1,
 			board_state.owned_tile_count(pid),
 			int(bag.get(PLANT_SCRIPT.Species.GRASS, 0)),
@@ -773,7 +1009,7 @@ func _phase_label(phase: int) -> String:
 		BoardState.Phase.PLACE:
 			return "等待放置"
 		BoardState.Phase.ACTION_WINDOW:
-			return "动作窗口"
+			return "动作窗口 · 双击右键结束回合"
 		BoardState.Phase.GAME_OVER:
 			return "终局"
 		_:
@@ -797,6 +1033,41 @@ func _refresh_toast() -> void:
 
 
 # === Helpers ===
+
+# 回合结算音效：全封闭土地块清场退种 → harvest；缺水升级枯萎 → plant_wilt
+func _play_settle_sounds(plant_analysis) -> void:
+	if plant_analysis == null:
+		return
+	if not plant_analysis.plants_removed.is_empty():
+		Sfx.play("harvest")
+	if not plant_analysis.closed_regions_stage_a.is_empty():
+		Sfx.play("plant_wilt")
+
+
+# 终局音效：先得分提示音，稍作停顿后播放胜负音乐
+func _play_end_game_sounds(result: Dictionary) -> void:
+	Sfx.play("score_point")
+	var winner: Dictionary = result.get("winner", {})
+	if bool(winner.get("is_tie", true)):
+		# 平局：无胜负音乐，用高一点的得分音收尾
+		get_tree().create_timer(0.8).timeout.connect(
+			func() -> void: Sfx.play("score_point", 0.0, 1.18, 0.0))
+	else:
+		get_tree().create_timer(0.8).timeout.connect(
+			func() -> void: Sfx.play("victory", 0.0, 1.0, 0.0))
+
+
+# 判断地块（含旋转）是否带水面：用于放置时的水花音效
+func _definition_carries_water(definition, rotation: int) -> bool:
+	if definition == null:
+		return false
+	if definition.center_kind == TileDefinition.CenterKind.LAKE:
+		return true
+	for edge in range(4):
+		if definition.edge_kind_at(edge, rotation) == TileDefinition.EdgeKind.WATER:
+			return true
+	return false
+
 
 func _player_color(player_id: int) -> Color:
 	return PLAYER_COLORS[player_id % PLAYER_COLORS.size()]
@@ -1058,7 +1329,6 @@ func _run_rule_engine_smoke() -> bool:
 
 
 func _run_plants_smoke() -> bool:
-	var PE = preload("res://scripts/plant_engine.gd")
 	var GD = preload("res://scripts/plant.gd")
 	var board = BOARD_STATE_SCRIPT.new()
 	var starter = tile_catalog.starter_tile()
@@ -1072,39 +1342,122 @@ func _run_plants_smoke() -> bool:
 
 	var r0 = board.plant(Vector2i.ZERO, GD.Species.GRASS, 0)
 	if bool(r0["valid"]):
-		push_error("Plants smoke failed: planting on starter (not turn_placed) was accepted.")
+		push_error("Plants smoke failed: planting before a tile was placed was accepted.")
 		return false
 
-	board.turn_placed_cells.append(Vector2i.ZERO)
+	var deal: Dictionary = board.deal_tile(starter)
+	if not bool(deal["valid"]):
+		push_error("Plants smoke failed: deal was rejected: %s" % deal["reason"])
+		return false
+	var place: Dictionary = board.commit_placement(Vector2i.RIGHT, 0)
+	if not bool(place["valid"]):
+		push_error("Plants smoke failed: placement was rejected: %s" % place["reason"])
+		return false
+	var connected: Array[Vector2i] = board.connected_land_cells_at(Vector2i.ZERO)
+	if not connected.has(Vector2i.ZERO) or not connected.has(Vector2i.RIGHT):
+		push_error("Plants smoke failed: connected LAND hover query did not include both joined tiles: %s" % str(connected))
+		return false
+
+	# 目标是开局就存在的格，而不是本回合刚放的 (1,0)：验证 r16 的任意历史地块种植。
 	var r1 = board.plant(Vector2i.ZERO, GD.Species.GRASS, 0)
 	if not bool(r1["valid"]):
-		push_error("Plants smoke failed: planting grass on starter was rejected: %s" % r1["reason"])
+		push_error("Plants smoke failed: planting grass on an older legal tile was rejected: %s" % r1["reason"])
 		return false
 	if int(board.seed_inventory[0][GD.Species.GRASS]) != 1:
 		push_error("Plants smoke failed: P1 grass seed not consumed.")
 		return false
 
-	var r_repeat = board.plant(Vector2i.ZERO, GD.Species.GRASS, 0)
+	var r_repeat = board.plant(Vector2i.RIGHT, GD.Species.GRASS, 0)
 	if bool(r_repeat["valid"]):
-		push_error("Plants smoke failed: same-species planting on same tile was accepted.")
+		push_error("Plants smoke failed: a second active planting action was accepted.")
 		return false
+	board.planting_action_used = false
 	var r_other = board.plant(Vector2i.ZERO, GD.Species.GRASS, 1)
 	if bool(r_other["valid"]):
-		push_error("Plants smoke failed: P2 planting grass on P1's grass tile was accepted.")
+		push_error("Plants smoke failed: P2 planting on P1's occupied tile was accepted.")
 		return false
-	var r_other_species = board.plant(Vector2i.ZERO, GD.Species.FLOWER, 1)
-	if not bool(r_other_species["valid"]):
-		push_error("Plants smoke failed: P2 planting flower on P1's grass tile was rejected.")
+	if not board.tile_has_any_plant(Vector2i.ZERO):
+		push_error("Plants smoke failed: successful planting did not occupy the target tile.")
 		return false
-
-	var rule = RuleEngine.analyze(board)
-	var pa1 = PE.settle_with_rule(board, rule)
-	if int(pa1.summary["water_short_count"]) != 2:
-		push_error("Plants smoke failed: both grass+flower should be WATER_SHORT, got summary=%s" % str(pa1.summary))
+	board.planting_action_used = true
+	var finish: Dictionary = board.finish_action_window(PLANT_ENGINE_SCRIPT, false)
+	if not bool(finish["valid"]):
+		push_error("Plants smoke failed: could not finish the planting turn: %s" % finish["reason"])
+		return false
+	var deal_auto: Dictionary = board.deal_tile(starter)
+	if not bool(deal_auto["valid"]):
+		push_error("Plants smoke failed: auto-expansion deal was rejected: %s" % deal_auto["reason"])
+		return false
+	var auto_place: Dictionary = board.commit_placement(Vector2i.LEFT, 0)
+	if not bool(auto_place["valid"]):
+		push_error("Plants smoke failed: auto-expansion placement was rejected: %s" % auto_place["reason"])
+		return false
+	if Dictionary(auto_place.get("automatic_expansion", {})).is_empty() or not board.tile_has_any_plant(Vector2i.LEFT):
+		push_error("Plants smoke failed: directly adjacent connected LAND did not auto-expand.")
+		return false
+	if int(board.seed_inventory[0][GD.Species.GRASS]) != 1:
+		push_error("Plants smoke failed: automatic expansion consumed a grass seed.")
+		return false
+	# 目标格本身空着即可种入已有植物的 land_region；花会立即驱逐该区域的草。
+	var flower_into_grass: Dictionary = board.plant(Vector2i.RIGHT, GD.Species.FLOWER, board.active_player)
+	if not bool(flower_into_grass["valid"]):
+		push_error("Plants smoke failed: planting into an occupied land region was rejected: %s" % flower_into_grass["reason"])
+		return false
+	if not board.tile_has_any_plant(Vector2i.RIGHT) or board.tile_has_any_plant(Vector2i.ZERO) or board.tile_has_any_plant(Vector2i.LEFT):
+		push_error("Plants smoke failed: flower/grass conflict did not keep only the higher-priority flower.")
+		return false
+	if int(board.seed_inventory[0][GD.Species.GRASS]) != 2:
+		push_error("Plants smoke failed: grass seed was not refunded once for the evicted land region.")
 		return false
 
 	print("PLANTS_SMOKE_PASS.")
 	return true
+
+
+func _capture_planting_interaction_preview() -> void:
+	# 真实场景内的可见验收：先显示旧地块的连通 LAND 描边，再在该旧地块种植。
+	# 不伪造 2D 图层；调用的正是鼠标悬停与状态机所使用的生产方法。
+	var starter := tile_catalog.starter_tile()
+	var deal: Dictionary = board_state.deal_tile(starter)
+	if not bool(deal["valid"]):
+		push_error("Planting capture: deal failed: %s" % deal["reason"])
+		get_tree().quit(1)
+		return
+	_try_place_current_tile(Vector2i.RIGHT)
+	if int(board_state.phase) != BoardState.Phase.ACTION_WINDOW:
+		push_error("Planting capture: placement did not reach action window.")
+		get_tree().quit(1)
+		return
+
+	has_hovered_cell = true
+	hovered_cell = Vector2i.ZERO
+	_update_action_hover()
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
+	var capture_directory := ProjectSettings.globalize_path("res://artifacts")
+	DirAccess.make_dir_recursive_absolute(capture_directory)
+	var hover_image := get_viewport().get_texture().get_image()
+	hover_image.save_png(capture_directory.path_join("planting_hover_connected_land_3d.png"))
+
+	_on_board_cell_clicked(Vector2i.ZERO)
+	var flower_choice := menu_species_targets.find(PLANT_SCRIPT.Species.FLOWER)
+	if menu_mode != MenuMode.PLANT or flower_choice < 0:
+		push_error("Planting capture: clicking an older legal tile did not open the species menu.")
+		get_tree().quit(1)
+		return
+	_handle_menu_choice(flower_choice)
+	if not board_state.tile_has_any_plant(Vector2i.ZERO):
+		push_error("Planting capture: selecting a species did not plant on the older tile.")
+		get_tree().quit(1)
+		return
+	_clear_connected_land_outline()
+	_refresh_hud()
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
+	var planted_image := get_viewport().get_texture().get_image()
+	planted_image.save_png(capture_directory.path_join("planting_success_older_tile_3d.png"))
+	print("PLANTING_INTERACTION_CAPTURE_PASS: hover outline and older-tile planting captured.")
+	get_tree().quit()
 
 
 func _capture_game_preview() -> void:

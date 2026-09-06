@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Free V2 Tile Base"
+albedo_color = Color(0.22, 0.17, 0.12, 1)
+roughness = 0.88

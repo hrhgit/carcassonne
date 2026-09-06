@@ -1,0 +1,32 @@
+[gd_resource type="ArrayMesh" format=4]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nyp4x"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_4ryi3"]
+_surfaces = [{
+"aabb": AABB(-2.45, -0.3, -2.45, 4.9, 0.3, 4.9),
+"format": 34896613377,
+"index_count": 36,
+"index_data": PackedByteArray("AAABAAIAAQADAAIAAAAEAAEAAgADAAUAAgAFAAAAAAAGAAQAAAAFAAYABAAHAAEAAQAHAAMABAAGAAcABQADAAcABQAHAAYA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 8,
+"vertex_data": PackedByteArray("AAAAAAAAAAD//wAA//8AAAAAAAD//wAAAAD/////AAD//wAAAAAAAAAA//8AAAAA/////wAAAAD///////8AAA==")
+}]
+blend_shape_mode = 0
+
+[resource]
+resource_name = "north_east_land_south_water_free_v2_BaseMesh"
+_surfaces = [{
+"aabb": AABB(-2.45, -0.3, -2.45, 4.9, 0.3, 4.9),
+"format": 34896613383,
+"index_count": 36,
+"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkADAANAA4ADAAPAA0AEAARABIAEAATABEAFAAVABYAFAAXABUA"),
+"material": SubResource("StandardMaterial3D_nyp4x"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 24,
+"vertex_data": PackedByteArray("AAAAAAAA/////wAA/////wAAAAD///////8AAAAA//8AAP//AAD//////////////////wAA//8AAP///////wAAAAAAAP+//////wAA/7///wAAAAD/vwAA//8AAP+///8AAAAA/7//////////v///AAD///+//////wAA/7///wAA/////wAA////////AAAAAP///////////////wAAAAD/////AAD//wAA//8AAAAAAAD//wAA/////////3//v/9//7//f/+//3//v/9//z//f/8//3//P/9//z//f/9//3//f/9//3//f/9//3////9/////f////3////8//7//P/+//z//v/8//7//v/9//7//f/+//3//v/9/")
+}]
+blend_shape_mode = 0
+shadow_mesh = SubResource("ArrayMesh_4ryi3")

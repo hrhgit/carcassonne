@@ -1,0 +1,114 @@
+{
+  "id": "north_east_land_south_water",
+  "source": "Free-asset V2: project boundary cage, LowPolyChill river-profile reference, KayKit FREE decorations",
+  "license": "Project-authored geometry plus CC0 references and decorations",
+  "tile_half_size": 2.45,
+  "edge_lock_band": 0.35,
+  "water_port_width": 0.48,
+  "water_height": 0.151,
+  "shoreline_length": 4.253086,
+  "land_outline": [
+    [
+      -2.45,
+      -2.45
+    ],
+    [
+      2.45,
+      -2.45
+    ],
+    [
+      2.45,
+      2.45
+    ],
+    [
+      1.383,
+      1.883
+    ],
+    [
+      0.384,
+      1.25
+    ],
+    [
+      -0.5,
+      0.5
+    ],
+    [
+      -1.25,
+      -0.384
+    ],
+    [
+      -1.883,
+      -1.383
+    ]
+  ],
+  "planting_boundary": [
+    [
+      -2.0463199615478516,
+      -2.0696799755096436
+    ],
+    [
+      2.0696799755096436,
+      -2.0696799755096436
+    ],
+    [
+      2.0696799755096436,
+      2.0463199615478516
+    ],
+    [
+      1.1733999252319336,
+      1.570039987564087
+    ],
+    [
+      0.3342399597167969,
+      1.0383199453353882
+    ],
+    [
+      -0.40832000970840454,
+      0.40832000970840454
+    ],
+    [
+      -1.0383199453353882,
+      -0.3342399597167969
+    ],
+    [
+      -1.570039987564087,
+      -1.1733999252319336
+    ]
+  ],
+  "water_path": [
+    [
+      0.0,
+      2.45
+    ],
+    [
+      0.0,
+      2.1
+    ],
+    [
+      -0.16,
+      1.72
+    ],
+    [
+      0.1,
+      1.31
+    ],
+    [
+      0.0,
+      0.924
+    ]
+  ],
+  "geometry_language": "convex LAND polygon and polyline WATER bands",
+  "objects": [
+    "Base",
+    "Meadow",
+    "NorthEastField",
+    "RiverBed",
+    "AnimatedSurface"
+  ],
+  "edge_contract": {
+    "north": "LAND full edge",
+    "east": "LAND full edge",
+    "south": "WATER centred width 0.48",
+    "west": "EMPTY full edge"
+  }
+}

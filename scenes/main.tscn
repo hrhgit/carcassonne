@@ -53,4 +53,5 @@ script = ExtResource("2_catalog")
 current = true
 near = 0.1
 far = 80.0
-fov = 42.0
+projection = 1
+size = 16.0

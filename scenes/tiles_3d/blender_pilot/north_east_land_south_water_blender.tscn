@@ -1,0 +1,67 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_mh7jd"]
+[ext_resource type="Resource" path="res://art/topologies/generated/procedural_north_east_land_south_water.tres" id="2_ema7p"]
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="3_j1pbk"]
+[ext_resource type="Resource" path="res://art/planting_masks/blender_pilot/north_east_land_south_water_field.tres" id="4_wyc64"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="5_obdlr"]
+[ext_resource type="ArrayMesh" path="res://art/generated/blender_pilot/north_east_land_south_water_base.tres" id="6_op2o6"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="7_yi763"]
+[ext_resource type="ArrayMesh" path="res://art/generated/blender_pilot/north_east_land_south_water_meadow.tres" id="8_3hx7r"]
+[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="9_y04lx"]
+[ext_resource type="ArrayMesh" path="res://art/generated/blender_pilot/north_east_land_south_water_land.tres" id="10_od4mm"]
+[ext_resource type="Material" path="res://art/materials/terrain/river_bank.tres" id="11_p4dr3"]
+[ext_resource type="ArrayMesh" path="res://art/generated/blender_pilot/north_east_land_south_water_river_bed.tres" id="12_3ibm5"]
+[ext_resource type="Material" path="res://art/materials/water/blender_pilot/north_east_land_south_water.tres" id="13_c8mwd"]
+[ext_resource type="ArrayMesh" path="res://art/generated/blender_pilot/north_east_land_south_water_water.tres" id="14_0lpsk"]
+[ext_resource type="PackedScene" path="res://art/models/kenney/nature_kit/rock_smallFlatA.glb" id="15_g3d5b"]
+[ext_resource type="PackedScene" path="res://art/models/kenney/nature_kit/rock_smallFlatB.glb" id="16_1jtrl"]
+[ext_resource type="PackedScene" path="res://art/models/kenney/nature_kit/rock_smallFlatC.glb" id="17_jojj1"]
+
+[node name="NorthEastLandSouthWaterBlenderPilot" type="Node3D" unique_id=1240550560]
+script = ExtResource("1_mh7jd")
+edge_markers = PackedInt32Array(1, 1, 2, 0)
+topology = ExtResource("2_ema7p")
+require_topology = true
+require_canonical_topology = true
+planting_masks = Array[ExtResource("3_j1pbk")]([ExtResource("4_wyc64")])
+
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1057098038]
+material_override = ExtResource("5_obdlr")
+mesh = ExtResource("6_op2o6")
+
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=598660881]
+material_override = ExtResource("7_yi763")
+mesh = ExtResource("8_3hx7r")
+
+[node name="LandSoil" type="Node3D" parent="." unique_id=1819904413]
+
+[node name="NorthEastField" type="MeshInstance3D" parent="LandSoil" unique_id=1746990821]
+material_override = ExtResource("9_y04lx")
+mesh = ExtResource("10_od4mm")
+
+[node name="Water" type="Node3D" parent="." unique_id=1264909195]
+
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=1949325667]
+material_override = ExtResource("11_p4dr3")
+mesh = ExtResource("12_3ibm5")
+
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=986123871]
+material_override = ExtResource("13_c8mwd")
+cast_shadow = 0
+mesh = ExtResource("14_0lpsk")
+
+[node name="Decorations" type="Node3D" parent="." unique_id=1702741195]
+
+[node name="MeadowRockA" type="Node3D" parent="Decorations" unique_id=1559185320 instance=ExtResource("15_g3d5b")]
+transform = Transform3D(0.22825356, 0, -0.07416408, 0, 0.24, 0, 0.07416408, 0, 0.22825356, -1.72, 0.145, 0.7)
+
+[node name="MeadowRockB" type="Node3D" parent="Decorations" unique_id=1965194358 instance=ExtResource("16_1jtrl")]
+transform = Transform3D(0.15429012, 0, 0.09270686, 0, 0.18, 0, -0.09270686, 0, 0.15429012, -1.48, 0.148, 1.52)
+
+[node name="MeadowRockC" type="Node3D" parent="Decorations" unique_id=1934441220 instance=ExtResource("17_jojj1")]
+transform = Transform3D(0.13827637, 0, 0.021900827, 0, 0.14, 0, -0.021900827, 0, 0.13827637, -0.88, 0.145, 1.92)
+
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=1900081438]
+
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=680716568]

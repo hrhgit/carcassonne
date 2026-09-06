@@ -1,0 +1,22 @@
+{
+  "id": "north_east_land_south_water",
+  "source": "Blender seam-safe terrain pilot",
+  "tile_half_size": 2.45,
+  "edge_lock_band": 0.35,
+  "water_port_width": 0.48,
+  "water_height": 0.168,
+  "shoreline_length": 5.197289,
+  "objects": [
+    "Base",
+    "Meadow",
+    "NorthEastField",
+    "RiverBed",
+    "AnimatedSurface"
+  ],
+  "edge_contract": {
+    "north": "LAND full edge",
+    "east": "LAND full edge",
+    "south": "WATER centred width 0.48",
+    "west": "EMPTY full edge"
+  }
+}

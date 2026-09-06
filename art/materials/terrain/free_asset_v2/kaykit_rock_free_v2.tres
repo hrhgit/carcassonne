@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Muted KayKit Rock"
+albedo_color = Color(0.33, 0.355, 0.32, 1)
+roughness = 0.91

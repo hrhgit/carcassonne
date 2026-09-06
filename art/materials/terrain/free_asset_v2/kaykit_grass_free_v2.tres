@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Muted KayKit Grass"
+albedo_color = Color(0.12, 0.22, 0.065, 1)
+roughness = 0.96

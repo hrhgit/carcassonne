@@ -12,7 +12,8 @@ var phase: int = Phase.DEAL
 var active_player: int = 0
 var turn_number: int = 1
 var tile_to_place = null                       # 抽到待放的 TileDefinition 或 null
-var turn_placed_cells: Array[Vector2i] = []    # 本回合已放置（用于 §7.2.2.B 种植权限定的 t_new）
+var turn_placed_cells: Array[Vector2i] = []    # 本回合已放置（仅用于流程/视觉，不限制种植目标）
+var planting_action_used := false               # §7.2.2：每回合至多主动种植一次
 
 # BoardState is the rule authority for tile placement. Visual nodes only read
 # the records stored here; they never decide whether a move is legal.
@@ -24,6 +25,7 @@ var placements: Dictionary = {}
 var plants: Dictionary = {}                  # plant_id (int) -> Plant
 var seed_inventory: Dictionary = {}          # player_id (int) -> { Species: count }
 var next_plant_id: int = 0
+var next_planting_order: int = 0             # §5.8：同种竞争 / 分水使用的稳定先后顺序
 var player_count: int = 2
 const INITIAL_SEEDS_PER_SPECIES: int = 2     # §7.1.1
 
@@ -37,6 +39,8 @@ func start_with(starter: TileDefinition) -> void:
 	phase = Phase.DEAL
 	tile_to_place = null
 	turn_placed_cells.clear()
+	planting_action_used = false
+	next_planting_order = 0
 
 
 # === §7 回合流程接口（每个由 main.gd 在玩家手动触发时调用） ===
@@ -49,6 +53,7 @@ func deal_tile(definition: TileDefinition) -> Dictionary:
 		return _verdict(false, "牌堆已空。")
 	tile_to_place = definition
 	phase = Phase.PLACE
+	planting_action_used = false
 	return _verdict(true, "已抽牌，进入放置阶段。")
 
 
@@ -94,6 +99,7 @@ func finish_action_window(plant_engine_script, deck_is_empty: bool) -> Dictionar
 	active_player = int(posmod(active_player + 1, player_count))
 	turn_number += 1
 	turn_placed_cells.clear()
+	planting_action_used = false
 	tile_to_place = null
 	if deck_is_empty:
 		phase = Phase.GAME_OVER
@@ -112,7 +118,7 @@ func run_end_game(plant_engine_script) -> Dictionary:
 	return {"valid": true, "reason": "终局已结算。", "plant_analysis": pa, "score_result": sc, "winner": w}
 
 
-# 本回合刚放置的格列表（§7.2.2.B 种植只能种在 turn_placed_cells 的 t_new 上）
+# 本回合刚放置的格列表（供流程/视觉使用；r16 起不限制主动种植目标）
 func is_turn_placed(cell: Vector2i) -> bool:
 	for c in turn_placed_cells:
 		if c == cell:
@@ -213,6 +219,12 @@ func place(definition: TileDefinition, cell: Vector2i, quarter_turns: int, playe
 		if entry["cell"] == cell:
 			rewrites.append(entry["edge"])
 	placements[cell] = _record(definition, quarter_turns, player_id, rewrites)
+	# §5.4.2：放牌后，直接相邻且 LAND 真正连通的已有植物会无消耗自动扩张。
+	# 这发生在玩家主动种植之前，且不会占用本回合的种植动作。
+	result["automatic_expansion"] = _apply_automatic_expansion(cell)
+	# §5.4.1：本次拼接可能把原本分离、且各有不同物种的土地块合并。
+	# 立即按树 > 花 > 草驱逐，不把冲突拖到回合结算。
+	result["species_conflict"] = _resolve_species_conflicts()
 	return result
 
 
@@ -236,11 +248,10 @@ func occupied_cells() -> Array[Vector2i]:
 	return cells
 
 
-# === 植物 / 扩张 API（规则书 §5.1 / §5.8 / §7.2.2.A·B） ===
+# === 植物 API（规则书 §5.1 / §5.8 / §7.2.2.A） ===
 
-# 列出指定玩家所有已放置的植物 id（按 species 顺序：草→花→树，再按 tile_cell 排序）
-# —— §5.8 扩张合法性 #1：目标格必须与已有己方植物所在 land_region L 相邻
-# —— §7.2.2.A 玩家从 "自己所有可扩张的植物" 中任选一棵发起扩张
+# 列出指定玩家所有已放置的植物 id（按 species 顺序：草→花→树，再按 tile_cell 排序）。
+# 自动扩张会从这类既有植物中选择直接相邻、土地连通的来源。
 func plants_owned_by(player_id: int) -> Array:
 	var out: Array = []
 	for plant_id in plants:
@@ -257,9 +268,17 @@ func plants_owned_by(player_id: int) -> Array:
 	return out
 
 
-# §5.8 #2：目标格不能有任何玩家的同物种植物
-# §5.8 #3：目标格可有任意数量的不同物种植物
-# —— §7.2.2.A 复用此校验
+# 目标格一旦有任意植物即被占据（§5.1 / §5.8）。
+# 这与 land_region 内可有多株同种植物是不同层级的限制。
+func tile_has_any_plant(tile: Vector2i) -> bool:
+	for plant_id in plants:
+		var p: Plant = plants[plant_id]
+		if p.tile_cell == tile:
+			return true
+	return false
+
+
+# 保留给旧调用方的物种级查询；新的主动种植合法性不再使用它。
 func tile_has_species(tile: Vector2i, species: int) -> bool:
 	for plant_id in plants:
 		var p: Plant = plants[plant_id]
@@ -267,68 +286,38 @@ func tile_has_species(tile: Vector2i, species: int) -> bool:
 			return true
 	return false
 
-
-# §7.2.2.A 扩张目标格合法性前置检查：
-#   1. 目标格 t 与已有己方植物所在 land_region L 相邻
-#      —— 简化为：target_land_region_id == source_plant.land_region_id
-#   2. t 不能有"任何玩家"的同物种植物（撞同种异主 / 同主都非法）
-#   3. 己方在该 species 还有种子剩余
-func can_expand_to(target_cell: Vector2i, species: int, owner: int, source_plant_id: int) -> Dictionary:
-	if not has_tile(target_cell):
-		return _verdict(false, "目标格尚未放置地块。")
-	var source: Plant = plants.get(source_plant_id, null)
-	if source == null or int(source.owner) != owner:
-		return _verdict(false, "源植物不属于当前玩家。")
-	if int(source.species) != species:
-		return _verdict(false, "扩张必须使用与源植物相同物种的种子。")
-	if source.land_region_id < 0:
-		return _verdict(false, "源植物尚未绑定土地块，等下次结算。")
-	var rule := RE.analyze(self)
-	var target_lr = rule.land_region_by_cell.get(target_cell, null)
-	if target_lr == null:
-		return _verdict(false, "目标格不在源植物的同一土地块。")
-	if int(target_lr.id) != source.land_region_id:
-		return _verdict(false, "目标格不在源植物的同一土地块。")
-	if tile_has_species(target_cell, species):
-		return _verdict(false, "目标格已存在同物种植物（撞种非法）。")
-	if not _has_seed(owner, species):
-		return _verdict(false, "该物种种子已耗尽。")
-	return _verdict(true, "扩张合法。")
-
-
-# §7.2.2.B 种植合法性前置检查：
-#   1. 目标格必须是本回合新放置 t_new 之一（每个 t_new 限种 1 棵）
-#   2. 目标格属于某个 land_region（含 LAND 边 / CENTER_LAND）
-#   3. 目标 land_region 内不能有别的玩家的植物
-#   4. 目标格同物种一格一棵
-#   5. 己方在该 species 还有种子剩余
+# §5.8 / §7.2.2.A 种植合法性前置检查：
+#   1. 只能在本回合"放置完成"后的动作窗口主动种植；
+#   2. 目标可以是棋盘上任意历史地块，不限本回合新牌；
+#   3. 目标必须含可种植 LAND，且整格没有任何植物；
+#   4. 当前玩家必须还有所选物种种子；
+#   5. 每回合最多一次主动种植。
 func can_plant_at(target_cell: Vector2i, species: int, owner: int) -> Dictionary:
+	if phase != Phase.ACTION_WINDOW:
+		return _verdict(false, "请先完成本回合的地块放置，再种植。")
+	if planting_action_used:
+		return _verdict(false, "本回合已经种植过；可结束回合。")
 	if not has_tile(target_cell):
 		return _verdict(false, "目标格尚未放置地块。")
-	if not is_turn_placed(target_cell):
-		return _verdict(false, "种植只能在本回合新放置的地块上（§7.2.2.B）。")
-	var rule := RE.analyze(self)
-	var target_lr = rule.land_region_by_cell.get(target_cell, null)
-	if target_lr == null:
+	if land_regions_at(target_cell).is_empty():
 		return _verdict(false, "目标格不属于任何土地块（无可种植空间）。")
-	var target_lr_id: int = int(target_lr.id)
-	# 目标 land_region 内不能有"别的玩家"的植物（己方合法）
-	for plant_id in plants:
-		var p: Plant = plants[plant_id]
-		if int(p.land_region_id) != target_lr_id:
-			continue
-		if int(p.owner) != owner:
-			return _verdict(false, "土地块内已有其他玩家的植物。")
-	# 同物种一主（即便己方，一格也只能有一棵同物种）
-	if tile_has_species(target_cell, species):
-		return _verdict(false, "目标格已存在同物种植物。")
+	if tile_has_any_plant(target_cell):
+		return _verdict(false, "目标格已经有植物占据。")
 	if not _has_seed(owner, species):
 		return _verdict(false, "该物种种子已耗尽。")
 	return _verdict(true, "种植合法。")
 
 
-# §7.2.2.B 种植动作：从 owner 扣除 1 枚对应种类种子，在 target_cell 上种一棵 species
-# 初始形态置 §5.8 默认 HEALTHY —— 由 PlantEngine.settle() 在下一次结算时按 V_L 重判
+func can_plant_any_species_at(target_cell: Vector2i, owner: int) -> Dictionary:
+	for species in [PD.Species.GRASS, PD.Species.FLOWER, PD.Species.TREE]:
+		var check := can_plant_at(target_cell, species, owner)
+		if bool(check["valid"]):
+			return check
+	return can_plant_at(target_cell, PD.Species.GRASS, owner)
+
+
+# §7.2.2.A 种植动作：从 owner 扣除 1 枚对应种类种子，在 target_cell 上种一棵 species。
+# 初始形态置 §5.3 的存活状态；水量只在闭合结算窗口处理。
 func plant(target_cell: Vector2i, species: int, owner: int) -> Dictionary:
 	var check := can_plant_at(target_cell, species, owner)
 	if not bool(check["valid"]):
@@ -341,26 +330,154 @@ func plant(target_cell: Vector2i, species: int, owner: int) -> Dictionary:
 	p.owner = owner
 	p.tile_cell = target_cell
 	p.form = Plant.Form.HEALTHY
+	p.seed_committed = true
+	p.expansion_order = next_planting_order
+	next_planting_order += 1
+	var regions := land_regions_at(target_cell)
+	if not regions.is_empty():
+		p.land_region_id = int(regions[0].id)
 	plants[p.id] = p
-	return {"valid": true, "reason": "已种植", "plant_id": p.id}
+	planting_action_used = true
+	return {
+		"valid": true,
+		"reason": "已种植",
+		"plant_id": p.id,
+		"species_conflict": _resolve_species_conflicts(),
+	}
 
 
-# §7.2.2.A 扩张动作：从 source_plant_id 所在 land_region 的相邻格 target_cell 上种一棵 species
-# —— 同种扩张要求 source.species == species
-func expand(target_cell: Vector2i, species: int, owner: int, source_plant_id: int) -> Dictionary:
-	var check := can_expand_to(target_cell, species, owner, source_plant_id)
-	if not bool(check["valid"]):
-		return check
-	_consume_seed(owner, species)
-	var p := Plant.new()
-	p.id = next_plant_id
+# §5.4.2 自动扩张：只考察新地块的直接相邻格；两个边均为 LAND，且两格都是
+# CENTER_LAND 时才是同一个 land_region。中心 EMPTY 的 land 边按规则书切断连通。
+func _apply_automatic_expansion(target_cell: Vector2i) -> Dictionary:
+	if tile_has_any_plant(target_cell):
+		return {}
+	var candidates: Array = []
+	for edge in range(4):
+		if not _direct_land_connection_at(target_cell, edge):
+			continue
+		var source_cell := neighbour_for_edge(target_cell, edge)
+		for source_plant in list_plants_in_tile(source_cell):
+			candidates.append(source_plant)
+	if candidates.is_empty():
+		return {}
+	candidates.sort_custom(func(a: Plant, b: Plant) -> bool:
+		if int(a.species) != int(b.species):
+			return int(a.species) > int(b.species) # 树 > 花 > 草
+		var a_order := int(a.expansion_order)
+		var b_order := int(b.expansion_order)
+		if a_order != b_order:
+			return a_order < b_order
+		return int(a.id) < int(b.id)
+	)
+	var source: Plant = candidates[0]
+	var expanded := Plant.new()
+	expanded.id = next_plant_id
 	next_plant_id += 1
-	p.species = species
-	p.owner = owner
-	p.tile_cell = target_cell
-	p.form = Plant.Form.HEALTHY
-	plants[p.id] = p
-	return {"valid": true, "reason": "已扩张", "plant_id": p.id}
+	expanded.species = int(source.species)
+	expanded.owner = int(source.owner)
+	expanded.tile_cell = target_cell
+	expanded.form = Plant.Form.HEALTHY
+	expanded.seed_committed = false
+	expanded.expansion_order = next_planting_order
+	next_planting_order += 1
+	var regions := land_regions_at(target_cell)
+	if not regions.is_empty():
+		expanded.land_region_id = int(regions[0].id)
+	plants[expanded.id] = expanded
+	return {
+		"plant_id": expanded.id,
+		"source_plant_id": int(source.id),
+		"owner": int(source.owner),
+		"species": int(source.species),
+	}
+
+
+func _direct_land_connection_at(cell: Vector2i, edge: int) -> bool:
+	if not has_tile(cell):
+		return false
+	var neighbour_cell := neighbour_for_edge(cell, edge)
+	if not has_tile(neighbour_cell):
+		return false
+	var placement := get_placement(cell)
+	var definition: TileDefinition = placement["definition"]
+	var rotation := int(placement["rotation"])
+	var neighbour := get_placement(neighbour_cell)
+	var neighbour_definition: TileDefinition = neighbour["definition"]
+	var neighbour_rotation := int(neighbour["rotation"])
+	if definition.edge_kind_at(edge, rotation) != TileDefinition.EdgeKind.LAND:
+		return false
+	if neighbour_definition.edge_kind_at(opposite_edge(edge), neighbour_rotation) != TileDefinition.EdgeKind.LAND:
+		return false
+	return definition.center_kind == TileDefinition.CenterKind.LAND \
+		and neighbour_definition.center_kind == TileDefinition.CenterKind.LAND
+
+
+# §5.4.1：一个 land_region 内只保留最高优先级物种（树 > 花 > 草）。
+# 同物种、哪怕跨玩家，也不会互相驱逐。退种按 "区域 × 玩家 × 物种" 去重。
+func _resolve_species_conflicts() -> Dictionary:
+	var rule := RE.analyze(self)
+	for plant_id in plants:
+		var plant: Plant = plants[plant_id]
+		var region = rule.land_region_by_cell.get(plant.tile_cell, null)
+		plant.land_region_id = int(region.id) if region != null else -1
+
+	var evicted_ids: Array = []
+	var changed_cells: Array[Vector2i] = []
+	for region in rule.land_regions:
+		var plants_in_region: Array = []
+		for plant_id in plants:
+			var plant: Plant = plants[plant_id]
+			if int(plant.land_region_id) == int(region.id):
+				plants_in_region.append(plant)
+		if plants_in_region.size() < 2:
+			continue
+		var highest_species := -1
+		for plant in plants_in_region:
+			highest_species = maxi(highest_species, int(plant.species))
+		var refunds: Dictionary = {}
+		for plant in plants_in_region:
+			if int(plant.species) == highest_species:
+				continue
+			var refund_key := "%d:%d" % [int(plant.owner), int(plant.species)]
+			if bool(plant.seed_committed) and not refunds.has(refund_key):
+				_refund_seed(int(plant.owner), int(plant.species))
+				refunds[refund_key] = true
+			evicted_ids.append(int(plant.id))
+			changed_cells.append(plant.tile_cell)
+	for plant_id in evicted_ids:
+		plants.erase(plant_id)
+	return {
+		"evicted_plant_ids": evicted_ids,
+		"changed_cells": changed_cells,
+	}
+
+
+# 供输入和悬停预览使用：一个中心 EMPTY 的多土地地块会返回它的每片土地。
+func land_regions_at(cell: Vector2i) -> Array:
+	var rule := RE.analyze(self)
+	var result: Array = []
+	for region in rule.land_regions:
+		if region.cells.has(cell):
+			result.append(region)
+	return result
+
+
+# 返回鼠标所在格全部 land_region 以及其相连格。结果去重并按稳定坐标排序，
+# 使视觉层不会因 Dictionary 遍历顺序闪动。
+func connected_land_cells_at(cell: Vector2i) -> Array[Vector2i]:
+	var cells: Dictionary = {}
+	for region in land_regions_at(cell):
+		for region_cell in region.cells:
+			cells[region_cell] = true
+	var result: Array[Vector2i] = []
+	for region_cell in cells.keys():
+		result.append(region_cell)
+	result.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		if a.y == b.y:
+			return a.x < b.x
+		return a.y < b.y
+	)
+	return result
 
 
 # 内部：扣 1 枚种子（无校验；调用方负责合法性）

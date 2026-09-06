@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://shaders/stylized_grass.gdshader" id="1_4p00n"]
+
+[resource]
+resource_name = "Free V2 Meadow"
+render_priority = 0
+shader = ExtResource("1_4p00n")
+shader_parameter/grass_color = Color(0.2, 0.31, 0.145, 1)
+shader_parameter/color_variation = 0.026
+shader_parameter/roughness = 0.9

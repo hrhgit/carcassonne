@@ -52,6 +52,7 @@ var tile_cell: Vector2i = Vector2i.ZERO
 var land_region_id: int = -1         # PlantEngine.analyze() 在每次结算时回填（首次种时为 -1）
 var form: int = Form.HEALTHY         # 当前形态
 var expansion_order: int = -1        # §5.8 扩张顺序字段，§7.2.3 末尾由调用方写入
+var seed_committed := true            # 主动种植消耗种子；自动扩张生成的株不重复消耗
 
 
 static func need_for(species: int) -> float:

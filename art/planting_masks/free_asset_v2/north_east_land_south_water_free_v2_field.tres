@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PlantingMask3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="1_6x28f"]
+
+[resource]
+script = ExtResource("1_6x28f")
+id = &"north_east_land_south_water_free_v2_field"
+boundary = PackedVector2Array(-2.04632, -2.06968, 2.06968, -2.06968, 2.06968, 2.04632, 1.1733999, 1.57004, 0.33423996, 1.03832, -0.40832, 0.40832, -1.03832, -0.33423996, -1.57004, -1.1733999)
+surface_height = 0.19
