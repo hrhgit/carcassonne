@@ -1,0 +1,28 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_single_edge_irrigated_a",
+	"edges": [
+		"LAND",
+		"WATER",
+		"EMPTY",
+		"EMPTY"
+	],
+	"id": "land_single_edge_irrigated_a",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH"
+			],
+			"id": "region_0"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 1148582771,
+	"water_routes": [
+		{
+			"from": "EAST",
+			"to_region": "region_0",
+			"via_hub": false
+		}
+	]
+}

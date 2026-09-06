@@ -5,6 +5,18 @@ const GENERATOR := preload("res://scripts/tile_prefab_generator_3d.gd")
 const RUNTIME_SCATTER := preload("res://scripts/runtime_plant_scatter_3d.gd")
 const EXPECTED_EDGES := [1, 1, 2, 0]
 const EXPECTED_TOPOLOGY := "res://art/topologies/generated/procedural_north_east_land_south_water.tres"
+const WATER_EDGE_SEAL_LOCAL_FLOOR := -0.187
+const WATER_PREFAB_PATHS := [
+	"res://scenes/tiles_3d/generated/procedural_north_east_land_south_water.tscn",
+	"res://scenes/tiles_3d/generated/procedural_land_n_water_w.tscn",
+	"res://scenes/tiles_3d/generated/procedural_land_new_water_s.tscn",
+	"res://scenes/tiles_3d/generated/procedural_land_nw_water_s.tscn",
+	"res://scenes/tiles_3d/generated/procedural_water_ne.tscn",
+	"res://scenes/tiles_3d/generated/procedural_water_ns.tscn",
+	"res://scenes/tiles_3d/generated/procedural_water_nes.tscn",
+	"res://scenes/tiles_3d/generated/procedural_water_nesw.tscn",
+	"res://scenes/tiles_3d/generated/procedural_lake.tscn",
+]
 
 
 func _init() -> void:
@@ -51,7 +63,7 @@ func _smoke() -> void:
 	var land := tile.get_node_or_null(^"LandSoil/NorthEastField") as MeshInstance3D
 	var bank := tile.get_node_or_null(^"Water/RiverBed") as MeshInstance3D
 	var water := tile.get_node_or_null(^"Water/AnimatedSurface") as MeshInstance3D
-	if base == null or meadow == null or land == null or bank == null or water == null or not land.mesh is ArrayMesh or not water.mesh is ArrayMesh:
+	if base == null or meadow == null or land == null or bank == null or water == null or not land.mesh is ArrayMesh or not bank.mesh is ArrayMesh or not water.mesh is ArrayMesh:
 		tile.queue_free()
 		_fail("Generated tile is missing one of its static 3D terrain layers.")
 		return
@@ -73,6 +85,18 @@ func _smoke() -> void:
 	var water_arrays := water.mesh.surface_get_arrays(0)
 	var water_vertices: PackedVector3Array = water_arrays[Mesh.ARRAY_VERTEX]
 	var shoreline: PackedVector2Array = water_arrays[Mesh.ARRAY_TEX_UV2]
+	if not _riverbed_is_fully_submerged(bank, water):
+		tile.queue_free()
+		_fail("Generated RiverBed escaped the AnimatedSurface footprint or elevation.")
+		return
+	if not _water_edge_is_sealed(water):
+		tile.queue_free()
+		_fail("Generated AnimatedSurface has no terrain-buried edge seal.")
+		return
+	if not _all_generated_water_edges_are_sealed_and_riverbeds_submerged():
+		tile.queue_free()
+		_fail("A generated WATER prefab exposed RiverBed or an open water-to-terrain seam.")
+		return
 	if shoreline.size() != water_vertices.size() or not _is_covered(water_vertices, Vector2(0.0, 2.35)) or not _is_covered(water_vertices, Vector2(0.0, 1.30)) or _is_covered(water_vertices, Vector2(1.0, -1.0)):
 		tile.queue_free()
 		_fail("Generated river is not a narrow south-centre inlet ending at the target field.")
@@ -180,14 +204,59 @@ func _smoke() -> void:
 	quit()
 
 
+func _riverbed_is_fully_submerged(riverbed: MeshInstance3D, water: MeshInstance3D) -> bool:
+	var riverbed_arrays := riverbed.mesh.surface_get_arrays(0)
+	var riverbed_vertices: PackedVector3Array = riverbed_arrays[Mesh.ARRAY_VERTEX]
+	var riverbed_indices: PackedInt32Array = riverbed_arrays[Mesh.ARRAY_INDEX] if riverbed_arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var riverbed_triangles := riverbed_indices if not riverbed_indices.is_empty() else PackedInt32Array(range(riverbed_vertices.size()))
+	var water_vertices: PackedVector3Array = water.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var riverbed_to_water := water.global_transform.affine_inverse() * riverbed.global_transform
+	for index in range(0, riverbed_triangles.size(), 3):
+		var a := riverbed_vertices[riverbed_triangles[index]]
+		var b := riverbed_vertices[riverbed_triangles[index + 1]]
+		var c := riverbed_vertices[riverbed_triangles[index + 2]]
+		for sample in [a, b, c, (a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5, (a + b + c) / 3.0]:
+			var surface_local: Vector3 = riverbed_to_water * sample
+			if surface_local.y >= -0.002 or not _is_covered(water_vertices, Vector2(surface_local.x, surface_local.z)):
+				return false
+	return true
+
+
+func _all_generated_water_edges_are_sealed_and_riverbeds_submerged() -> bool:
+	for scene_path in WATER_PREFAB_PATHS:
+		var scene := load(scene_path) as PackedScene
+		var tile := scene.instantiate() as TileArtwork3D if scene != null else null
+		if tile == null:
+			return false
+		get_root().add_child(tile)
+		var riverbed := tile.get_node_or_null(^"Water/RiverBed") as MeshInstance3D
+		var water := tile.get_node_or_null(^"Water/AnimatedSurface") as MeshInstance3D
+		var valid := riverbed != null and water != null and riverbed.mesh is ArrayMesh and water.mesh is ArrayMesh and _riverbed_is_fully_submerged(riverbed, water) and _water_edge_is_sealed(water)
+		tile.free()
+		if not valid:
+			return false
+	return true
+
+
+func _water_edge_is_sealed(water: MeshInstance3D) -> bool:
+	var vertices: PackedVector3Array = water.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var floor_vertices := 0
+	for vertex in vertices:
+		if vertex.y <= WATER_EDGE_SEAL_LOCAL_FLOOR + 0.001:
+			floor_vertices += 1
+	# Port endpoints meet matching water sheets directly.  Only non-port banks
+	# need vertical seals, which avoids a z-fighting dark strip at tile seams.
+	return floor_vertices >= 4
+
+
 func _has_default_water_parameters(material: ShaderMaterial) -> bool:
 	return (
 		is_equal_approx(float(material.get_shader_parameter("foam_line_width")), 0.06)
 		and is_equal_approx(float(material.get_shader_parameter("foam_wave_strength")), 0.5)
 		and is_equal_approx(float(material.get_shader_parameter("foam_wave_frequency")), 10.0)
-		and is_equal_approx(float(material.get_shader_parameter("foam_width")), 0.05)
+		and is_equal_approx(float(material.get_shader_parameter("foam_width")), 0.09)
 		and is_equal_approx(float(material.get_shader_parameter("foam_scale")), 10.7)
-		and is_equal_approx(float(material.get_shader_parameter("foam_radius")), 0.4)
+		and is_equal_approx(float(material.get_shader_parameter("foam_radius")), 0.58)
 		and is_equal_approx(float(material.get_shader_parameter("foam_cutoff")), 0.6)
 		and is_equal_approx(float(material.get_shader_parameter("foam_speed")), 0.025)
 		and float(material.get_shader_parameter("foam_shoreline_length")) > 0.0

@@ -21,7 +21,7 @@ size = Vector3(4.9, 0.3, 4.9)
 material = ExtResource("6_vphsk")
 size = Vector2(4.9, 4.9)
 
-[node name="LandNWaterW" type="Node3D" unique_id=905810596]
+[node name="LandNWaterW" type="Node3D" unique_id=189618845]
 script = ExtResource("1_hyh67")
 edge_markers = PackedInt32Array(1, 0, 0, 2)
 topology = ExtResource("2_wo4pk")
@@ -29,35 +29,35 @@ require_topology = true
 require_canonical_topology = true
 planting_masks = Array[ExtResource("3_iotlx")]([ExtResource("4_xq54l")])
 
-[node name="Base" type="MeshInstance3D" parent="." unique_id=1120153588]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1148337154]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 mesh = SubResource("BoxMesh_2rhya")
 
-[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1573607937]
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1485888844]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
 mesh = SubResource("PlaneMesh_a5j3r")
 
-[node name="LandSoil" type="Node3D" parent="." unique_id=1398756878]
+[node name="LandSoil" type="Node3D" parent="." unique_id=848559778]
 
-[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=160135131]
+[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=734586788]
 material_override = ExtResource("7_av5u7")
 mesh = ExtResource("8_q835d")
 
-[node name="Water" type="Node3D" parent="." unique_id=781823221]
+[node name="Water" type="Node3D" parent="." unique_id=1416825950]
 
-[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=1984503476]
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=449467934]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 material_override = ExtResource("9_2m3yn")
 mesh = ExtResource("10_2qjti")
 
-[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=267639301]
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=295985854]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
 material_override = ExtResource("11_du6v5")
 cast_shadow = 0
 mesh = ExtResource("12_8pbfn")
 
-[node name="Decorations" type="Node3D" parent="." unique_id=2067632441]
+[node name="Decorations" type="Node3D" parent="." unique_id=419412666]
 
-[node name="GrowingPlants" type="Node3D" parent="." unique_id=1273103239]
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=1299592553]
 
-[node name="WitheredPlants" type="Node3D" parent="." unique_id=1776727851]
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=873001127]

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="TileTopology3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_topology_3d.gd" id="1_n2pvh"]
+
+[resource]
+script = ExtResource("1_n2pvh")
+id = &"water_cross"
+edge_markers = PackedInt32Array(2, 2, 2, 2)
+land_region_ids = PackedStringArray()
+land_region_edge_masks = PackedInt32Array()
+water_edges_ending_at_land = PackedInt32Array()
+water_edges_via_central_hub = PackedInt32Array(0, 1, 2, 3)
+visual_geometry_is_verified = true

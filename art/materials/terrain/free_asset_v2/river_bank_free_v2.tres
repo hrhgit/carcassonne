@@ -1,7 +1,7 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
 [resource]
-resource_name = "Free V2 River Bank"
+resource_name = "Free V2 Submerged Riverbed"
 cull_mode = 2
-albedo_color = Color(0.3, 0.29, 0.235, 1)
+albedo_color = Color(0.105, 0.175, 0.075, 1)
 roughness = 0.88

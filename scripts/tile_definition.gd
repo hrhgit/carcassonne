@@ -8,20 +8,18 @@ enum Edge {
 	WEST,
 }
 
-# 5 种边基础地形
+# 4 种边基础地形
 enum EdgeKind {
 	EMPTY,   # 空地
 	LAND,    # 土地
 	WATER,   # 水口
 	RIVER,   # 河流（仅河流地块持有）
-	BANK,    # 河岸（仅河流地块持有）
 }
 
-# 4 种中心地形
+# 3 种中心地形
 enum CenterKind {
 	EMPTY,
 	LAND,
-	LAKE,
 	RIVER,
 }
 
@@ -30,8 +28,8 @@ const CARD_STARTER := 0
 const CARD_TILE := 1
 const CARD_RIVER := 2
 
-const EDGE_KIND_NAMES := ["EMPTY", "LAND", "WATER", "RIVER", "BANK"]
-const CENTER_KIND_NAMES := ["EMPTY", "LAND", "LAKE", "RIVER"]
+const EDGE_KIND_NAMES := ["EMPTY", "LAND", "WATER", "RIVER"]
+const CENTER_KIND_NAMES := ["EMPTY", "LAND", "RIVER"]
 const EDGE_LETTERS := ["N", "E", "S", "W"]
 
 var id: StringName
@@ -42,13 +40,14 @@ var edges := PackedInt32Array([EdgeKind.EMPTY, EdgeKind.EMPTY, EdgeKind.EMPTY, E
 var ir_edges := PackedInt32Array([0, 0, 0, 0])  # 4 边各自的 IRRIGATION 修饰
 var center_kind: int = CenterKind.EMPTY
 var is_river_tile := false
+# 河流开局牌堆的固定河尾。河头仍由 CARD_STARTER 的 starter_river 直接放上棋盘。
+var river_setup_terminal := false
 
 # 内部连通性（规则引擎 §3.3 依赖）：同一地块内哪些水边属于同一水网，
 # 哪些陆边属于同一土地块（土地块）。
 # - land_subnets: 数组，每个元素是一个包含若干边索引(0..3 用位掩码)的分组，
 #   组内所有陆边在块内相互连通；LAND 中心自动并入所有 land 子网。
-# - water_subnets: 数组，每个元素是同一水网的水边位掩码；LAKE 中心自动并入
-#   一个水网（由 center 单独表达，不进 water_subnets）。
+# - water_subnets: 数组，每个元素是同一水网的水边位掩码；水网只由 WATER 边连通构成。
 var land_subnets: Array = []   # 元素为 int 位掩码（bit0=N bit1=E bit2=S bit3=W）
 var water_subnets: Array = []  # 元素为 int 位掩码
 # Kept for compatibility with the old visual-study nodes. The playable board
@@ -78,19 +77,20 @@ func configure(
 	new_notes: String = "",
 	new_water_subnets: Array = [],
 	new_land_subnets: Array = [],
+	new_river_setup_terminal := false,
 ) -> void:
 	if new_edges.size() != 4:
 		push_error("A tile definition must have exactly four edge values.")
 		return
 	for edge_kind in new_edges:
-		if edge_kind < EdgeKind.EMPTY or edge_kind > EdgeKind.BANK:
-			push_error("Tile definitions can only use EMPTY, LAND, WATER, RIVER, or BANK edge markers.")
+		if edge_kind < EdgeKind.EMPTY or edge_kind > EdgeKind.RIVER:
+			push_error("Tile definitions can only use EMPTY, LAND, WATER, or RIVER edge markers.")
 			return
 	if new_ir_edges.size() != 4:
 		push_error("IRRIGATION flags must have exactly four entries.")
 		return
 	if new_center < CenterKind.EMPTY or new_center > CenterKind.RIVER:
-		push_error("Center kind must be one of EMPTY / LAND / LAKE / RIVER.")
+		push_error("Center kind must be one of EMPTY / LAND / RIVER.")
 		return
 	# IR 只能修饰 LAND / WATER
 	for i in range(4):
@@ -139,6 +139,7 @@ func configure(
 	ir_edges = new_ir_edges.duplicate()
 	center_kind = new_center
 	is_river_tile = new_is_river_tile
+	river_setup_terminal = new_river_setup_terminal
 	starts_grown = new_starts_grown
 	visual_seed = new_visual_seed
 	irrigated_land_edges = new_irrigated_land_edges.duplicate()
@@ -158,8 +159,8 @@ func configure(
 		irrigated_land_edges = edge_indices(EdgeKind.LAND)
 	if not has_valid_irrigation():
 		push_error("Every water edge must route to at least one land edge on the same tile.")
-	if is_river_tile and not validate_river_tile_invariant():
-		push_error("River tile %s violates the RIVER/BANK-only invariant." % new_id)
+	if not validate_river_tile_invariant():
+		push_error("River tile %s violates the CENTER_RIVER channel invariant." % new_id)
 
 
 func edge_indices(kind: int, quarter_turns := 0) -> PackedInt32Array:
@@ -172,6 +173,34 @@ func edge_indices(kind: int, quarter_turns := 0) -> PackedInt32Array:
 
 func land_edge_count() -> int:
 	return edge_indices(EdgeKind.LAND).size()
+
+
+# §5.2（v17）：地块面积——单边土地（仅 1 条 land 边）算 0.5 格，其余（2/3/4 条）算 1 格。
+# 用于"植物需水 = need × 面积"公式。
+func land_area() -> float:
+	var edge_count := land_edge_count()
+	if edge_count <= 1:
+		return 0.5
+	return 1.0
+
+
+# §5.1/§5.2：指定 land 子网（split 卡一格多块地时按"块"计）的 land 边数。
+# 面积按该子网的边数判定：1 条边 = 0.5 格（center EMPTY 的每块地）；≥2 条边 = 1 格。
+func land_subnet_edge_count(subnet_idx: int, quarter_turns := 0) -> int:
+	var masks := land_subnet_masks(quarter_turns)
+	if subnet_idx < 0 or subnet_idx >= masks.size():
+		return 0
+	var mask := int(masks[subnet_idx])
+	var count := 0
+	for edge in range(4):
+		if (mask & edge_bitmask(edge)) != 0:
+			count += 1
+	return count
+
+
+# §5.2：指定 land 子网的面积（0.5 或 1.0 格）。
+func land_subnet_area(subnet_idx: int, quarter_turns := 0) -> float:
+	return 0.5 if land_subnet_edge_count(subnet_idx, quarter_turns) <= 1 else 1.0
 
 
 func edge_kind_at(world_edge: int, quarter_turns := 0) -> int:
@@ -213,17 +242,27 @@ func is_playable() -> bool:
 		return false
 	if not has_valid_irrigation():
 		return false
-	if is_river_tile and not validate_river_tile_invariant():
+	if not validate_river_tile_invariant():
 		return false
 	return true
 
 
-# 河流地块约束：每条边 RIVER 或 BANK，至少一条 RIVER，且不能有 IR 修饰
+# 河流地块约束（§2.4.4）：中心强制 CENTER_RIVER；每条边只取 EMPTY / RIVER / WATER。
+# RIVER 保持主河连通；WATER 是从主河两侧引出的普通细水路，按 WATER 水网连接。
+# 至少 1 条 RIVER，且不能有 IR 修饰。任何 RIVER 标记都会强制走这套约束，避免普通地块伪造河流端口。
 func validate_river_tile_invariant() -> bool:
-	if not is_river_tile:
-		return true
+	var uses_river_channel := center_kind == CenterKind.RIVER
 	for e in range(4):
-		if edges[e] != EdgeKind.RIVER and edges[e] != EdgeKind.BANK:
+		if edges[e] == EdgeKind.RIVER:
+			uses_river_channel = true
+	if not uses_river_channel:
+		return not is_river_tile
+	if not is_river_tile:
+		return false
+	if center_kind != CenterKind.RIVER:
+		return false
+	for e in range(4):
+		if edges[e] != EdgeKind.RIVER and edges[e] != EdgeKind.WATER and edges[e] != EdgeKind.EMPTY:
 			return false
 	if edge_indices(EdgeKind.RIVER).is_empty():
 		return false
@@ -241,8 +280,6 @@ static func edge_kind_label(kind: int) -> String:
 			return "水口"
 		EdgeKind.RIVER:
 			return "河流"
-		EdgeKind.BANK:
-			return "河岸"
 		_:
 			return "空地"
 
@@ -251,8 +288,6 @@ static func center_kind_label(kind: int) -> String:
 	match kind:
 		CenterKind.LAND:
 			return "中心土地"
-		CenterKind.LAKE:
-			return "湖泊"
 		CenterKind.RIVER:
 			return "中心河流"
 		_:
@@ -304,8 +339,7 @@ func land_subnet_connected(edge_a: int, edge_b: int, quarter_turns := 0) -> bool
 	return idx_a == idx_b
 
 
-# 同一地块内两条边是否属于同一 water 子网
-# 仅依赖 water_subnets 表 + 中心 LAKE 规则（中心 LAKE 自动并入一个水网）。
+# 同一地块内两条边是否属于同一 water 子网（v17：水网仅由 WATER 边连通，中心不再入网）。
 func water_subnet_connected(edge_a: int, edge_b: int, quarter_turns := 0) -> bool:
 	var bit_a := edge_bitmask(int(posmod(edge_a - quarter_turns, 4)))
 	var bit_b := edge_bitmask(int(posmod(edge_b - quarter_turns, 4)))
@@ -342,9 +376,7 @@ func land_subnet_masks(quarter_turns := 0) -> Array:
 	return out
 
 
-# 给定旋转下，本地块的"water 子网位掩码集合"。
-# 含中心 LAKE 的并入规则：把一个统一的位掩码 0x10 加入作为"中心"位（仅用于占位区分）。
-# 注意：真实合并到外部水网时仍走边连通性（中心 LAKE 不产生边），此函数仅返回"地块级子网"集合。
+# 给定旋转下，本地块的"water 子网位掩码集合"（v17：仅由 WATER 边连通构成，无中心并入）。
 func water_subnet_masks(quarter_turns := 0) -> Array:
 	var out: Array = []
 	for subnet in water_subnets:
@@ -358,9 +390,10 @@ func water_subnet_masks(quarter_turns := 0) -> Array:
 	return out
 
 
-# 判定该地块在指定旋转下，是否应被外部水网整体并入（§3.3.1 第 3 条：中心 LAKE 地块整体入水网）
+# 判定该地块在指定旋转下，是否应被外部水网整体并入。
+# v17：中心不再有 LAKE，中心本身不并入水网；水网只由 WATER 边连通构成。
 func joins_water_net_via_center(quarter_turns := 0) -> bool:
-	return center_kind == CenterKind.LAKE
+	return false
 
 
 # 给定旋转下，该地块的"land 边总位掩码"——所有 land 边的位 OR（不含中心）。
@@ -390,15 +423,12 @@ func irrigation_edge_mask_at(quarter_turns := 0) -> int:
 	return mask
 
 
-# 该子网掩码（来自其他地块）能否与本地块的某个 land 子网连通：
-# 中心 LAND 自动接入所有 land 子网；否则要求对方掩码至少有一条边与本侧 land 边对齐。
-# 用于规则引擎 land_region 合并阶段。
+# 保留给旧调用方的本地 land 子网查询。CENTER_EMPTY 只分隔同一地块内部
+# 的不同子网；跨地块 LAND↔LAND 接缝由 RuleEngine 按两侧实际命中的子网合并。
 func can_land_join(world_edge: int, other_edge: int, other_centre_land: bool, quarter_turns := 0) -> bool:
 	if edges[int(posmod(world_edge - quarter_turns, 4))] != EdgeKind.LAND:
 		return false
 	if center_kind == CenterKind.LAND:
 		return true
-	# 中心 EMPTY：每条 land 边独立 land_region；
-	# 仅当对方地块也是中心 EMPTY，且两条 land 边不在同一个 land_subnet 内时，视为不连通
-	# ——否则两侧 land 边会自然连成一个新 land_region（§3.3.2 第 1 条）
+	# 中心 EMPTY：每条 land 边仅在本地独立；当前 LAND 边仍可跨接缝连到邻格。
 	return true

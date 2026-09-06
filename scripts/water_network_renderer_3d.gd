@@ -114,8 +114,6 @@ func _tile_has_water(board: BoardState, cell: Vector2i) -> bool:
 	var definition := placement["definition"] as TileDefinition
 	if definition == null:
 		return false
-	if definition.center_kind == TileDefinition.CenterKind.LAKE:
-		return true
 	for edge in range(4):
 		if _edge_carries_water(board, cell, edge):
 			return true
@@ -130,9 +128,8 @@ func _edge_carries_water(board: BoardState, cell: Vector2i, edge: int) -> bool:
 	if definition == null:
 		return false
 	var kind := definition.edge_kind_at(edge, int(placement["rotation"]))
-	return kind == TileDefinition.EdgeKind.WATER or (
-		kind == TileDefinition.EdgeKind.BANK and (placement.get("water_rewrite_at", []) as Array).has(edge)
-	)
+	# 只有 WATER 边进入普通水网；RIVER 主河不作为水网边。
+	return kind == TileDefinition.EdgeKind.WATER
 
 
 func _surface_for(placed_tile_nodes: Dictionary, cell: Vector2i) -> MeshInstance3D:

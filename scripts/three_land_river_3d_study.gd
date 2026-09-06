@@ -136,7 +136,7 @@ func _ready() -> void:
 		_set_foam_debug_panel_visible(false)
 	else:
 		_set_foam_debug_panel_visible(true)
-	DisplayServer.window_set_title("碧水沃野 · 三边沃野 3D Study")
+	DisplayServer.window_set_title("青菱沃野 · 三边沃野 3D Study")
 
 	if capture_requested:
 		call_deferred("_capture_preview")
@@ -402,9 +402,9 @@ func _run_study_smoke() -> void:
 		&"foam_line_width": 0.06,
 		&"foam_wave_strength": 0.5,
 		&"foam_wave_frequency": 10.0,
-		&"foam_width": 0.05,
+		&"foam_width": 0.09,
 		&"foam_scale": 10.7,
-		&"foam_radius": 0.4,
+		&"foam_radius": 0.58,
 		&"foam_cutoff": 0.6,
 		&"foam_speed": 0.025,
 	}

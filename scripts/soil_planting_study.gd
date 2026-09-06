@@ -40,7 +40,7 @@ var capture_requested := false
 var smoke_requested := false
 
 var tuning: Dictionary = {
-	&"soil_herb": {"density": 28.0, "scale": 1.0, "variation": 0.45},
+	&"soil_herb": {"density": 40.0, "scale": 1.0, "variation": 0.45},
 	&"soil_flower": {"density": 12.0, "scale": 1.0, "variation": 0.30},
 	&"soil_sapling": {"density": 3.0, "scale": 0.92, "variation": 0.20},
 }
@@ -82,7 +82,7 @@ func _ready() -> void:
 	_build_tuning_panel()
 	_set_camera()
 	_apply_visual_state(true)
-	DisplayServer.window_set_title("碧水沃野 · 沃土播种植物调节")
+	DisplayServer.window_set_title("青菱沃野 · 沃土播种植物调节")
 	if capture_requested:
 		call_deferred("_capture_preview")
 	elif smoke_requested:
@@ -332,7 +332,7 @@ func _count_preview_species() -> Dictionary:
 
 func _restore_defaults() -> void:
 	tuning = {
-		&"soil_herb": {"density": 28.0, "scale": 1.0, "variation": 0.45},
+		&"soil_herb": {"density": 40.0, "scale": 1.0, "variation": 0.45},
 		&"soil_flower": {"density": 12.0, "scale": 1.0, "variation": 0.30},
 		&"soil_sapling": {"density": 3.0, "scale": 0.92, "variation": 0.20},
 	}

@@ -1,0 +1,28 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_adjacent_edges_split",
+	"edges": [
+		"LAND",
+		"LAND",
+		"EMPTY",
+		"EMPTY"
+	],
+	"id": "land_adjacent_edges_split",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH"
+			],
+			"id": "region_0"
+		},
+		{
+			"edges": [
+				"EAST"
+			],
+			"id": "region_1"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 3489191919,
+	"water_routes": []
+}

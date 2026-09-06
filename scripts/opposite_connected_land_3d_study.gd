@@ -14,7 +14,7 @@ var elevation_degrees := 55.0
 func _ready() -> void:
 	_set_camera_elevation(elevation_degrees)
 	_set_growth_state(TileArtwork3D.GrowthState.BARE)
-	DisplayServer.window_set_title("碧水沃野 · 相对双边连通地块")
+	DisplayServer.window_set_title("青菱沃野 · 相对双边连通地块")
 
 
 func _unhandled_input(event: InputEvent) -> void:

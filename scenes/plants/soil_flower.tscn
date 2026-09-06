@@ -14,6 +14,8 @@ species_id = &"soil_flower"
 owner_color_mesh_name = &"flower_redC"
 owner_color_surface_index = 1
 withered_material = SubResource("MatWithered")
+wind_sway_enabled = true
+wind_sway_strength = 0.82
 
 [node name="GrowingParts" type="Node3D" parent="."]
 

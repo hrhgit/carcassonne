@@ -8,6 +8,8 @@ const EPSILON := 0.0003
 const WATER_MEADOW_MIN_CLEARANCE := 0.006
 const LAND_MEADOW_MIN_CLEARANCE := 0.006
 const LAND_SURFACE_HEIGHT := 0.190
+const RIVERBED_MIN_SUBMERGENCE := 0.004
+const WATER_EDGE_SEAL_FLOOR := -0.012
 
 
 func _init() -> void:
@@ -30,9 +32,10 @@ func _smoke() -> void:
 				return
 
 	var water := tile.get_node_or_null(^"Water/AnimatedSurface") as MeshInstance3D
+	var riverbed := tile.get_node_or_null(^"Water/RiverBed") as MeshInstance3D
 	var land := tile.get_node_or_null(^"LandSoil/NorthEastField") as MeshInstance3D
 	var meadow := tile.get_node_or_null(^"Meadow") as MeshInstance3D
-	if water == null or land == null or meadow == null:
+	if water == null or riverbed == null or land == null or meadow == null or not water.mesh is ArrayMesh or not riverbed.mesh is ArrayMesh:
 		_fail("Pilot lost a required terrain layer.")
 		return
 	var water_arrays := water.mesh.surface_get_arrays(0)
@@ -52,9 +55,19 @@ func _smoke() -> void:
 	if not elevated_land_water:
 		_fail("Polygonal water no longer visibly enters the LAND contact.")
 		return
-	var minimum_water_clearance := _minimum_surface_meadow_clearance(water.mesh as ArrayMesh, meadow.mesh as ArrayMesh)
+	if not _water_has_broad_land_mouth(water.mesh as ArrayMesh, land.mesh as ArrayMesh):
+		_fail("Water no longer makes a broad, direct contact on the flat LAND surface.")
+		return
+	if not _has_water_edge_seal(water.mesh as ArrayMesh):
+		_fail("AnimatedSurface is no longer sealed down into terrain at its shoreline.")
+		return
+	var minimum_water_clearance := _minimum_surface_meadow_clearance(water.mesh as ArrayMesh, meadow.mesh as ArrayMesh, true)
 	if minimum_water_clearance == INF or minimum_water_clearance < WATER_MEADOW_MIN_CLEARANCE:
 		_fail("Water surface falls into or too near the MEADOW relief (minimum clearance %.5f)." % minimum_water_clearance)
+		return
+	var minimum_riverbed_submergence := _minimum_surface_submergence(riverbed.mesh as ArrayMesh, water.mesh as ArrayMesh)
+	if minimum_riverbed_submergence == -INF or minimum_riverbed_submergence < RIVERBED_MIN_SUBMERGENCE:
+		_fail("RiverBed is visible beside or above the AnimatedSurface (minimum submergence %.5f)." % minimum_riverbed_submergence)
 		return
 	var minimum_land_clearance := _minimum_surface_meadow_clearance(land.mesh as ArrayMesh, meadow.mesh as ArrayMesh)
 	if minimum_land_clearance == INF or minimum_land_clearance < LAND_MEADOW_MIN_CLEARANCE:
@@ -113,7 +126,9 @@ func _smoke() -> void:
 		Vector3(0.0, 0.0, TILE_SIZE),
 		"z",
 		HALF_SIZE,
-		[NodePath("Base"), NodePath("Meadow"), NodePath("Water/RiverBed"), NodePath("Water/AnimatedSurface")],
+		# RiverBed is intentionally inset from every visible water boundary;
+		# AnimatedSurface alone owns the canonical WATER seam.
+		[NodePath("Base"), NodePath("Meadow"), NodePath("Water/AnimatedSurface")],
 	):
 		return
 	if not _test_pair(
@@ -133,7 +148,7 @@ func _smoke() -> void:
 	):
 		return
 
-	print("FREE_ASSET_TILE_TERRAIN_PASS: uniform flat LAND top, faceted broad polygon slopes, MEADOW-clearing LAND-fed WATER tongue, KayKit MEADOW-only decorations, deterministic plants, UV2 water, and WATER/LAND/EMPTY seams are valid. minimum_clearance water=%.5f land=%.5f" % [minimum_water_clearance, minimum_land_clearance])
+	print("FREE_ASSET_TILE_TERRAIN_PASS: uniform flat LAND top, faceted broad polygon slopes, MEADOW-clearing LAND-fed WATER tongue, fully submerged RiverBed, KayKit MEADOW-only decorations, deterministic plants, UV2 water, and WATER/LAND/EMPTY seams are valid. minimum_clearance water=%.5f land=%.5f riverbed=%.5f" % [minimum_water_clearance, minimum_land_clearance, minimum_riverbed_submergence])
 	quit()
 
 
@@ -204,7 +219,7 @@ func _is_covered(mesh: ArrayMesh, probe: Vector2) -> bool:
 	return false
 
 
-func _minimum_surface_meadow_clearance(surface: ArrayMesh, meadow: ArrayMesh) -> float:
+func _minimum_surface_meadow_clearance(surface: ArrayMesh, meadow: ArrayMesh, top_faces_only := false) -> float:
 	var minimum_clearance := INF
 	var arrays := surface.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -213,11 +228,54 @@ func _minimum_surface_meadow_clearance(surface: ArrayMesh, meadow: ArrayMesh) ->
 		var a := vertices[indices[index]]
 		var b := vertices[indices[index + 1]]
 		var c := vertices[indices[index + 2]]
+		if top_faces_only:
+			var normal := (b - a).cross(c - a)
+			if normal.length_squared() <= EPSILON * EPSILON or absf(normal.normalized().y) < 0.50:
+				continue
 		for sample in [a, b, c, (a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5, (a + b + c) / 3.0]:
 			var meadow_height := _surface_height_at(meadow, Vector2(sample.x, sample.z))
 			if meadow_height < INF:
 				minimum_clearance = minf(minimum_clearance, sample.y - meadow_height)
 	return minimum_clearance
+
+
+func _has_water_edge_seal(mesh: ArrayMesh) -> bool:
+	var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var floor_vertices := 0
+	for vertex in vertices:
+		if vertex.y <= WATER_EDGE_SEAL_FLOOR + EPSILON:
+			floor_vertices += 1
+	return floor_vertices >= 20
+
+
+func _water_has_broad_land_mouth(water: ArrayMesh, land: ArrayMesh) -> bool:
+	var water_vertices: PackedVector3Array = water.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var contact_samples := 0
+	for vertex in water_vertices:
+		if vertex.y < LAND_SURFACE_HEIGHT + 0.002:
+			continue
+		var land_height := _surface_height_at(land, Vector2(vertex.x, vertex.z))
+		if land_height >= LAND_SURFACE_HEIGHT - EPSILON:
+			contact_samples += 1
+	return contact_samples >= 5
+
+
+func _minimum_surface_submergence(underlay: ArrayMesh, surface: ArrayMesh) -> float:
+	var arrays := underlay.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
+	var minimum_submergence := INF
+	for index in range(0, triangle_indices.size(), 3):
+		var a := vertices[triangle_indices[index]]
+		var b := vertices[triangle_indices[index + 1]]
+		var c := vertices[triangle_indices[index + 2]]
+		for sample in [a, b, c, (a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5, (a + b + c) / 3.0]:
+			var surface_height := _surface_height_at(surface, Vector2(sample.x, sample.z))
+			if surface_height == INF:
+				return -INF
+			minimum_submergence = minf(minimum_submergence, surface_height - sample.y)
+	return minimum_submergence
 
 
 func _land_top_is_flat(land: ArrayMesh) -> bool:
@@ -283,6 +341,7 @@ func _surface_height_at(mesh: ArrayMesh, probe: Vector2) -> float:
 	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array(range(vertices.size()))
+	var highest_surface := -INF
 	for index in range(0, indices.size(), 3):
 		var a := vertices[indices[index]]
 		var b := vertices[indices[index + 1]]
@@ -294,8 +353,8 @@ func _surface_height_at(mesh: ArrayMesh, probe: Vector2) -> float:
 		var weight_b := ((c.z - a.z) * (probe.x - c.x) + (a.x - c.x) * (probe.y - c.z)) / denominator
 		var weight_c := 1.0 - weight_a - weight_b
 		if weight_a >= -EPSILON and weight_b >= -EPSILON and weight_c >= -EPSILON:
-			return a.y * weight_a + b.y * weight_b + c.y * weight_c
-	return INF
+			highest_surface = maxf(highest_surface, a.y * weight_a + b.y * weight_b + c.y * weight_c)
+	return INF if highest_surface == -INF else highest_surface
 
 
 func _point_in_triangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2) -> bool:

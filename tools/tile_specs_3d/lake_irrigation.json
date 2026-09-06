@@ -1,0 +1,22 @@
+{
+	"center": "lake",
+	"display_name": "程序化：lake_irrigation",
+	"edges": [
+		"EMPTY",
+		"EMPTY",
+		"EMPTY",
+		"LAND"
+	],
+	"id": "lake_irrigation",
+	"land_regions": [
+		{
+			"edges": [
+				"WEST"
+			],
+			"id": "region_0"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 802489465,
+	"water_routes": []
+}

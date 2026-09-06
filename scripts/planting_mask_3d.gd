@@ -21,8 +21,20 @@ func is_valid() -> bool:
 	return true
 
 
-func contains_point(point: Vector2, additional_clearance := 0.0) -> bool:
+# Surface membership deliberately differs from sowing safety.  A player may
+# select anywhere on the baked LAND surface, while scatter placement still
+# keeps its authored edge_clearance from banks, slopes, and exclusion zones.
+func contains_surface_point(point: Vector2) -> bool:
 	if not is_valid() or not Geometry2D.is_point_in_polygon(point, boundary):
+		return false
+	for zone in exclusion_zones:
+		if Geometry2D.is_point_in_polygon(point, zone):
+			return false
+	return true
+
+
+func contains_point(point: Vector2, additional_clearance := 0.0) -> bool:
+	if not contains_surface_point(point):
 		return false
 	if _distance_to_edges(point, boundary) < edge_clearance + additional_clearance:
 		return false

@@ -18,7 +18,7 @@ size = Vector3(4.9, 0.3, 4.9)
 material = ExtResource("7_ue5ba")
 size = Vector2(4.9, 4.9)
 
-[node name="LandFour" type="Node3D" unique_id=1003146747]
+[node name="LandFour" type="Node3D" unique_id=1444578655]
 script = ExtResource("1_ctqoo")
 edge_markers = PackedInt32Array(1, 1, 1, 1)
 topology = ExtResource("2_b80f5")
@@ -26,28 +26,28 @@ require_topology = true
 require_canonical_topology = true
 planting_masks = Array[ExtResource("3_acm03")]([ExtResource("4_sial2"), ExtResource("5_kbhql")])
 
-[node name="Base" type="MeshInstance3D" parent="." unique_id=1695509333]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=716730824]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 mesh = SubResource("BoxMesh_r82uq")
 
-[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1459727442]
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1292370205]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
 mesh = SubResource("PlaneMesh_htbgh")
 
-[node name="LandSoil" type="Node3D" parent="." unique_id=6006666]
+[node name="LandSoil" type="Node3D" parent="." unique_id=1796039470]
 
-[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=395476985]
+[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=1869271018]
 material_override = ExtResource("8_y4oei")
 mesh = ExtResource("9_612pm")
 
-[node name="Water" type="Node3D" parent="." unique_id=569343354]
+[node name="Water" type="Node3D" parent="." unique_id=1254683513]
 
-[node name="RiverBed" type="Node3D" parent="Water" unique_id=2064053128]
+[node name="RiverBed" type="Node3D" parent="Water" unique_id=1629758081]
 
-[node name="AnimatedSurface" type="Node3D" parent="Water" unique_id=1646134222]
+[node name="AnimatedSurface" type="Node3D" parent="Water" unique_id=1875476623]
 
-[node name="Decorations" type="Node3D" parent="." unique_id=1951694098]
+[node name="Decorations" type="Node3D" parent="." unique_id=676752698]
 
-[node name="GrowingPlants" type="Node3D" parent="." unique_id=310901600]
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=1166333904]
 
-[node name="WitheredPlants" type="Node3D" parent="." unique_id=1031691437]
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=2118574065]

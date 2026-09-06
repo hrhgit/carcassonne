@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_8jmfp"]
+[ext_resource type="Resource" path="res://art/topologies/generated/procedural_land_opposite_edges_irrigated_split.tres" id="2_mooi0"]
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="3_txsac"]
+[ext_resource type="Resource" path="res://art/planting_masks/generated/procedural_land_opposite_edges_irrigated_split_land_region_0_01.tres" id="4_2oefv"]
+[ext_resource type="Resource" path="res://art/planting_masks/generated/procedural_land_opposite_edges_irrigated_split_land_region_1_01.tres" id="5_fevef"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="6_mpinf"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="7_deyoc"]
+[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="8_fpbqu"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_opposite_edges_irrigated_split_land_region_0.tres" id="9_e2ajs"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_opposite_edges_irrigated_split_land_region_1.tres" id="10_bni3e"]
+[ext_resource type="Material" path="res://art/materials/terrain/river_bank.tres" id="11_rpvdn"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_opposite_edges_irrigated_split_river_bank.tres" id="12_7fnow"]
+[ext_resource type="Material" path="res://art/materials/water/generated/procedural_land_opposite_edges_irrigated_split.tres" id="13_x03vj"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_opposite_edges_irrigated_split_water.tres" id="14_0pddj"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_duc2q"]
+material = ExtResource("6_mpinf")
+size = Vector3(4.9, 0.3, 4.9)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_4f7v7"]
+material = ExtResource("7_deyoc")
+size = Vector2(4.9, 4.9)
+
+[node name="LandOppositeEdgesIrrigatedSplit" type="Node3D" unique_id=2008360685]
+script = ExtResource("1_8jmfp")
+edge_markers = PackedInt32Array(1, 2, 1, 2)
+topology = ExtResource("2_mooi0")
+require_topology = true
+require_canonical_topology = true
+planting_masks = Array[ExtResource("3_txsac")]([ExtResource("4_2oefv"), ExtResource("5_fevef")])
+
+[node name="Base" type="MeshInstance3D" parent="." unique_id=2073704102]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+mesh = SubResource("BoxMesh_duc2q")
+
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=261372156]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
+mesh = SubResource("PlaneMesh_4f7v7")
+
+[node name="LandSoil" type="Node3D" parent="." unique_id=1062547866]
+
+[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=1595435111]
+material_override = ExtResource("8_fpbqu")
+mesh = ExtResource("9_e2ajs")
+
+[node name="Region1" type="MeshInstance3D" parent="LandSoil" unique_id=436441956]
+material_override = ExtResource("8_fpbqu")
+mesh = ExtResource("10_bni3e")
+
+[node name="Water" type="Node3D" parent="." unique_id=810691909]
+
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=585016652]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+material_override = ExtResource("11_rpvdn")
+mesh = ExtResource("12_7fnow")
+
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=1481871789]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+material_override = ExtResource("13_x03vj")
+cast_shadow = 0
+mesh = ExtResource("14_0pddj")
+
+[node name="Decorations" type="Node3D" parent="." unique_id=1962049117]
+
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=364377083]
+
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=2126174682]

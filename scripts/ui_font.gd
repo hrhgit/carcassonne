@@ -29,7 +29,7 @@ const WINDOWS_FONT_PATHS: Array[String] = [
 
 # Sample the full visible vocabulary so a partial CJK fallback cannot be
 # selected just because it contains the most common interface characters.
-const SAMPLE_CHARACTERS := "碧水沃野本地双人拼接地块相接边口必须一致每张须与地图至少共用一条边且所有相接的两条边类型完全相同同一台设备轮流游玩第回合玩家当前没有剩余条土地个水口边口图例占满整水流中心窄空地开阔草牌堆进度已放置旋转重开点击高亮空格放置键或右侧右为但相接该位置已经有这张灌溉定义无效新现有地图一边都匹配已放下了最后一块轮到请下一块度冲积十字溪畔小地双岸地块分流水渠三边水渠沃土中心河畔田野生长中裸土枯萎"
+const SAMPLE_CHARACTERS := "青菱沃野本地双人拼接地块相接边口必须一致每张须与地图至少共用一条边且所有相接的两条边类型完全相同同一台设备轮流游玩第回合玩家当前没有剩余条土地个水口边口图例占满整水流中心窄空地开阔草牌堆进度已放置旋转重开点击高亮空格放置键或右侧右为但相接该位置已经有这张灌溉定义无效新现有地图一边都匹配已放下了最后一块轮到请下一块度冲积十字溪畔小地双岸地块分流水渠三边水渠沃土中心河畔田野生长中裸土枯萎"
 
 static var _resolved_font = null
 

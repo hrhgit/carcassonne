@@ -1,0 +1,24 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_three_edges",
+	"edges": [
+		"LAND",
+		"LAND",
+		"LAND",
+		"EMPTY"
+	],
+	"id": "land_three_edges",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH",
+				"EAST",
+				"SOUTH"
+			],
+			"id": "region_0"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 3467699970,
+	"water_routes": []
+}

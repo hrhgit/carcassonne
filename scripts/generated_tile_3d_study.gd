@@ -8,6 +8,7 @@ const PLAYER_COLORS := [Color(0.18, 0.52, 0.86, 1.0), Color(0.85, 0.27, 0.38, 1.
 var requested_state := 1
 var player_index := 0
 var capture_requested := false
+@export var capture_name := "procedural_north_east_land_south_water_3d"
 
 
 func _ready() -> void:
@@ -17,6 +18,9 @@ func _ready() -> void:
 			capture_requested = true
 		elif argument.begins_with("--capture-player="):
 			player_index = clampi(argument.trim_prefix("--capture-player=").to_int() - 1, 0, PLAYER_COLORS.size() - 1)
+			capture_requested = true
+		elif argument.begins_with("--capture-name="):
+			capture_name = argument.trim_prefix("--capture-name=").strip_edges()
 			capture_requested = true
 		elif argument == "--capture":
 			capture_requested = true
@@ -61,7 +65,7 @@ func _capture() -> void:
 		await get_tree().process_frame
 	await get_tree().create_timer(0.25).timeout
 	var state_name: String = ["bare", "growing", "withered"][requested_state]
-	var output_path := ProjectSettings.globalize_path("res://artifacts/procedural_north_east_land_south_water_3d_%s_p%d.png" % [state_name, player_index + 1])
+	var output_path := ProjectSettings.globalize_path("res://artifacts/%s_%s_p%d.png" % [capture_name, state_name, player_index + 1])
 	var image := get_viewport().get_texture().get_image()
 	if image == null or image.save_png(output_path) != OK:
 		push_error("Could not capture generated 3D tile with the active display driver.")

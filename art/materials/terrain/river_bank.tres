@@ -1,7 +1,7 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
 [resource]
-resource_name = "River Bank"
-albedo_color = Color(0.40, 0.48, 0.40, 1)
+resource_name = "Submerged Riverbed"
+albedo_color = Color(0.145, 0.235, 0.105, 1)
 roughness = 0.88
 cull_mode = 2

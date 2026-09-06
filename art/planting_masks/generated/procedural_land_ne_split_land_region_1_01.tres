@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PlantingMask3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="1_v4406"]
+
+[resource]
+script = ExtResource("1_v4406")
+id = &"land_ne_split_region_1_01"
+boundary = PackedVector2Array(2.45, -2.45, 2.45, 2.45, 1.7199999, 2.45, 1.4599999, 1.7000002, 1.16, 1.1, 0.96, 0.48000002, 0.9, 3.934025e-08, 0.96, -0.47999996, 1.16, -1.1, 1.4600002, -1.6999999, 1.7200001, -2.45)
+surface_height = 0.152

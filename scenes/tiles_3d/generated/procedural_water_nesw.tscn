@@ -17,38 +17,38 @@ size = Vector3(4.9, 0.3, 4.9)
 material = ExtResource("4_1ajq3")
 size = Vector2(4.9, 4.9)
 
-[node name="WaterNesw" type="Node3D" unique_id=486487537]
+[node name="WaterNesw" type="Node3D" unique_id=1886350284]
 script = ExtResource("1_ubs2n")
 edge_markers = PackedInt32Array(2, 2, 2, 2)
 topology = ExtResource("2_tqlnb")
 require_topology = true
 require_canonical_topology = true
 
-[node name="Base" type="MeshInstance3D" parent="." unique_id=607461759]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1429853940]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 mesh = SubResource("BoxMesh_0wefk")
 
-[node name="Meadow" type="MeshInstance3D" parent="." unique_id=296197925]
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1648033702]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
 mesh = SubResource("PlaneMesh_mq8jy")
 
-[node name="LandSoil" type="Node3D" parent="." unique_id=2143901785]
+[node name="LandSoil" type="Node3D" parent="." unique_id=1167721536]
 
-[node name="Water" type="Node3D" parent="." unique_id=1695573204]
+[node name="Water" type="Node3D" parent="." unique_id=877143549]
 
-[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=1843059426]
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=1065469145]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 material_override = ExtResource("5_y5odi")
 mesh = ExtResource("6_6dioo")
 
-[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=1914070195]
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=692882355]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
 material_override = ExtResource("7_bvxnc")
 cast_shadow = 0
 mesh = ExtResource("8_a1ccp")
 
-[node name="Decorations" type="Node3D" parent="." unique_id=398540599]
+[node name="Decorations" type="Node3D" parent="." unique_id=469070261]
 
-[node name="GrowingPlants" type="Node3D" parent="." unique_id=1139567203]
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=682050585]
 
-[node name="WitheredPlants" type="Node3D" parent="." unique_id=1768582501]
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=1529842358]

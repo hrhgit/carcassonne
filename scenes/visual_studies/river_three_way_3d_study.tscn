@@ -1,0 +1,94 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/generated_tile_3d_study.gd" id="1_study"]
+[ext_resource type="PackedScene" path="res://scenes/tiles_3d/generated/procedural_river_water_branches.tscn" id="2_tile"]
+
+[sub_resource type="Environment" id="EnvironmentStudy"]
+background_mode = 1
+background_color = Color(0.045, 0.065, 0.055, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.64, 0.72, 0.66, 1)
+ambient_light_energy = 0.56
+ssao_enabled = true
+ssao_radius = 0.62
+ssao_intensity = 1.25
+
+[sub_resource type="StandardMaterial3D" id="MatTable"]
+albedo_color = Color(0.105, 0.14, 0.115, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="MeshTable"]
+material = SubResource("MatTable")
+size = Vector3(12, 0.34, 10)
+
+[sub_resource type="StyleBoxFlat" id="StylePanel"]
+bg_color = Color(0.025, 0.065, 0.047, 0.93)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.72, 0.53, 0.85)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="RiverWaterBranchesStudy" type="Node3D"]
+script = ExtResource("1_study")
+capture_name = "river_water_branches_3d"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStudy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-51, -28, 0)
+light_color = Color(1, 0.91, 0.78, 1)
+light_energy = 1.34
+shadow_enabled = true
+directional_shadow_max_distance = 24.0
+
+[node name="Fill" type="OmniLight3D" parent="."]
+position = Vector3(-3.6, 4.4, 1.8)
+light_color = Color(0.46, 0.70, 0.90, 1)
+light_energy = 1.24
+omni_range = 10.0
+
+[node name="Table" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.38, 0)
+mesh = SubResource("MeshTable")
+
+[node name="GeneratedTile" parent="." instance=ExtResource("2_tile")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+projection = 1
+size = 7.35
+near = 0.1
+far = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="Panel" parent="UI"]
+offset_left = 30.0
+offset_top = 28.0
+offset_right = 570.0
+offset_bottom = 142.0
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="Title" type="Label" parent="UI/Panel"]
+offset_left = 22.0
+offset_top = 16.0
+offset_right = 510.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(0.9, 0.98, 0.9, 1)
+theme_override_font_sizes/font_size = 24
+text = "程序化 3D 预制件 · 主河双侧细水路"
+
+[node name="Rule" type="Label" parent="UI/Panel"]
+offset_left = 23.0
+offset_top = 58.0
+offset_right = 510.0
+offset_bottom = 86.0
+theme_override_colors/font_color = Color(0.75, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "N/S WATER 0.48 · E/W RIVER 1.08 · 中心汇合 · 无 LAND / 无植物"

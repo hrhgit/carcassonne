@@ -1,20 +1,28 @@
 extends SceneTree
 
-# Batch driver: reads the playable CSV catalog, derives one procedural spec per
-# distinct edge configuration, generates a fixed 3D prefab for each, and writes
-# the generated prefab path back into the CSV's prefab_scene column.
+# Batch driver for the compact, playable `data/tiles.csv` card table. Every
+# row receives its own fixed 3D prefab at build time; runtime only selects and
+# instances fixed scenes through TileCatalog (a table row may explicitly reuse
+# another baked scene, such as the terminal river reusing the starter river).
+#
 # Usage: godot --headless --path . --script res://tools/generate_game_tiles_3d.gd
-
 const GENERATOR := preload("res://scripts/tile_prefab_generator_3d.gd")
-const CSV_PATH := "res://data/tiles_classic.csv"
+const CSV_PATH := "res://data/tiles.csv"
 const SPEC_DIR := "res://tools/tile_specs_3d"
 
 const EMPTY := 0
 const LAND := 1
 const WATER := 2
-const CENTER_LAKE := 2
-const EDGE_NAMES := ["EMPTY", "LAND", "WATER", "RIVER", "BANK"]
-const EDGE_LETTERS := ["n", "e", "s", "w"]
+const RIVER := 3
+# These are the compact card table's numeric codes, not TilePrefabGenerator3D's
+# internal centre enum. The generator below translates them to string names.
+const CENTER_EMPTY := 0
+const CENTER_LAND := 1
+const CENTER_RIVER := 2
+const CENTER_LAKE := 3
+const EDGE_NAMES := ["EMPTY", "LAND", "WATER", "RIVER"]
+const EDGE_DIRECTIONS := ["NORTH", "EAST", "SOUTH", "WEST"]
+const RIVER_WIDTH := 1.08
 
 
 func _init() -> void:
@@ -24,37 +32,31 @@ func _init() -> void:
 func _run() -> void:
 	var rows := _read_csv()
 	if rows.is_empty():
-		push_error("Could not read any tile rows from %s" % CSV_PATH)
-		quit(1)
+		_fail("Could not read any tile rows from %s" % CSV_PATH)
+		return
+	var directory_error := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SPEC_DIR))
+	if directory_error != OK:
+		_fail("Could not create spec directory %s" % SPEC_DIR)
 		return
 
-	var prefab_by_config := {}
+	var generated := 0
 	for row in rows:
-		var edges: PackedInt32Array = row["edges"]
-		var land_subnets: Array = row["land_subnets"]
-		var center: int = int(row["center"])
-		var config_key := _config_key(edges, center)
-		if prefab_by_config.has(config_key):
-			continue
-		var spec := _build_spec(config_key, edges, land_subnets, center)
+		var spec := _build_spec(row)
+		if spec.is_empty():
+			_fail("Could not derive a valid procedural spec for %s" % row["id"])
+			return
 		var json_path := "%s/%s.json" % [SPEC_DIR, spec["id"]]
 		if _write_json(json_path, spec) != OK:
-			push_error("Could not write spec %s" % json_path)
-			quit(1)
+			_fail("Could not write spec %s" % json_path)
 			return
 		var result: Dictionary = GENERATOR.build_from_spec_file(json_path)
 		if not bool(result["ok"]):
-			push_error("GENERATE_GAME_TILES_FAIL %s: %s" % [spec["id"], result["error"]])
-			quit(1)
+			_fail("%s: %s" % [spec["id"], result["error"]])
 			return
-		prefab_by_config[config_key] = result["scene_path"]
+		generated += 1
 		print("GENERATED %s -> %s" % [spec["id"], result["scene_path"]])
 
-	if _rewrite_csv(rows, prefab_by_config) != OK:
-		push_error("Could not rewrite the CSV with generated prefab paths.")
-		quit(1)
-		return
-	print("GENERATE_GAME_TILES_PASS: %d distinct prefabs generated and wired into the catalog." % prefab_by_config.size())
+	print("GENERATE_GAME_TILES_PASS: %d fixed prefabs generated from the new card table." % generated)
 	quit()
 
 
@@ -81,8 +83,14 @@ func _read_csv() -> Array:
 		return []
 	var header := _split_line(lines[header_index])
 	var idx := {}
-	for col in range(header.size()):
-		idx[header[col]] = col
+	for column in range(header.size()):
+		idx[header[column]] = column
+	var required_field_count := 0
+	for required in ["id", "N", "E", "S", "W", "N_ir", "E_ir", "S_ir", "W_ir", "center"]:
+		if not idx.has(required):
+			push_error("CSV missing required column %s" % required)
+			return []
+		required_field_count = maxi(required_field_count, int(idx[required]) + 1)
 
 	var rows: Array = []
 	for index in range(header_index + 1, lines.size()):
@@ -90,151 +98,119 @@ func _read_csv() -> Array:
 		if line.is_empty() or line.begins_with("#"):
 			continue
 		var fields := _split_line(line)
-		if fields.size() < header.size():
+		if fields.size() < required_field_count:
+			push_warning("Skipping short row %d" % (index + 1))
 			continue
 		var edges := PackedInt32Array()
-		for col in ["N", "E", "S", "W"]:
-			edges.append(_edge_kind(fields[idx[col]]))
+		for column in ["N", "E", "S", "W"]:
+			edges.append(_edge_kind(fields[idx[column]]))
+		var irrigation := PackedInt32Array()
+		for column in ["N_ir", "E_ir", "S_ir", "W_ir"]:
+			irrigation.append(1 if fields[idx[column]].strip_edges() == "1" else 0)
+		var id := fields[idx["id"]].strip_edges()
+		if id.is_empty() or not id.is_valid_identifier():
+			push_warning("Skipping invalid tile id at row %d" % (index + 1))
+			continue
 		rows.append({
-			"line_index": index,
-			"raw_line": lines[index],
-			"fields": fields,
-			"idx": idx,
+			"id": id,
 			"edges": edges,
-			"land_subnets": _parse_subnets(fields[idx["land_subnets"]]),
+			"irrigation": irrigation,
 			"center": _center_kind(fields[idx["center"]]),
 		})
 	return rows
 
 
-func _build_spec(config_key: String, edges: PackedInt32Array, land_subnets: Array, center: int) -> Dictionary:
-	var spec_id := _spec_id(edges, center)
-	var edge_names := PackedStringArray()
-	for edge in edges:
-		edge_names.append(EDGE_NAMES[edge])
-
-	var regions: Array = []
-	for subnet_index in range(land_subnets.size()):
-		var region_edges: Array = []
-		for edge in range(4):
-			if int(land_subnets[subnet_index]) & (1 << edge):
-				region_edges.append(_edge_name(edge))
-		if not region_edges.is_empty():
-			regions.append({"id": "region_%d" % subnet_index, "edges": region_edges})
-
+func _build_spec(row: Dictionary) -> Dictionary:
+	var edges: PackedInt32Array = row["edges"]
+	var center := int(row["center"])
+	var id := String(row["id"])
+	if center < CENTER_EMPTY or center > CENTER_LAKE:
+		return {}
+	var edge_names: Array[String] = []
 	var has_land := false
 	var has_water := false
+	var has_river := false
 	for edge in edges:
-		if edge == LAND:
-			has_land = true
-		elif edge == WATER:
-			has_water = true
+		if edge < EMPTY or edge > RIVER:
+			return {}
+		edge_names.append(EDGE_NAMES[edge])
+		has_land = has_land or edge == LAND
+		has_water = has_water or edge == WATER
+		has_river = has_river or edge == RIVER
 
+	var regions := _land_regions(edges, center)
 	var routes: Array = []
-	var center_name := "none"
-	if center == CENTER_LAKE and not has_land and not has_water:
-		center_name = "lake"
-	elif has_water and not has_land:
-		center_name = "hub"
+	if has_river:
+		if not has_river or center != CENTER_RIVER or has_land:
+			return {}
 		for edge in range(4):
-			if edges[edge] == WATER:
-				routes.append({"from": _edge_name(edge), "via_hub": true})
+			if edges[edge] == RIVER or edges[edge] == WATER:
+				routes.append({"from": EDGE_DIRECTIONS[edge], "via_hub": true})
 	else:
-		var water_edge_count := 0
-		for edge in range(4):
-			if edges[edge] == WATER:
-				water_edge_count += 1
+		if center == CENTER_RIVER:
+			return {}
+		var water_count := 0
+		for edge in edges:
+			if edge == WATER:
+				water_count += 1
 		for edge in range(4):
 			if edges[edge] != WATER:
 				continue
-			var route := {"from": _edge_name(edge), "to_region": regions[0]["id"], "via_hub": water_edge_count > 1}
-			routes.append(route)
+			if regions.is_empty():
+				routes.append({"from": EDGE_DIRECTIONS[edge], "via_hub": true})
+			else:
+				routes.append({
+					"from": EDGE_DIRECTIONS[edge],
+					"to_region": regions[0]["id"],
+					"via_hub": water_count > 1,
+				})
 
+	var center_name := "none"
+	match center:
+		CENTER_LAKE:
+			center_name = "lake"
+		CENTER_RIVER:
+			center_name = "river"
+		_:
+			if has_water and not has_land:
+				center_name = "hub"
 	return {
-		"id": spec_id,
-		"display_name": "程序化：" + spec_id,
-		"seed": 20260905 + edges[0] * 1000 + edges[1] * 100 + edges[2] * 10 + edges[3],
+		"id": id,
+		"display_name": "程序化：" + id,
+		"seed": abs(id.hash()),
 		"center": center_name,
-		"edges": Array(edge_names),
+		"river_width": RIVER_WIDTH,
+		"edges": edge_names,
 		"land_regions": regions,
 		"water_routes": routes,
 	}
 
 
-func _config_key(edges: PackedInt32Array, center: int) -> String:
-	# Centre lake is the only all-EMPTY feature, so include it; centre LAND
-	# shares the same full-land prefab as a four-LAND-edge tile.
-	if int(center) == CENTER_LAKE:
-		return "lake"
-	return "%d,%d,%d,%d" % [edges[0], edges[1], edges[2], edges[3]]
-
-
-func _spec_id(edges: PackedInt32Array, center: int) -> String:
-	if int(center) == CENTER_LAKE:
-		return "lake"
+func _land_regions(edges: PackedInt32Array, center: int) -> Array:
 	var land_edges: Array = []
-	var water_edges: Array = []
 	for edge in range(4):
 		if edges[edge] == LAND:
-			land_edges.append(edge)
-		elif edges[edge] == WATER:
-			water_edges.append(edge)
-	if land_edges.size() == 4:
-		return "land_four"
-	if land_edges.is_empty() and not water_edges.is_empty():
-		return "water_" + _edge_letters(water_edges)
-	var parts: Array = []
-	if not land_edges.is_empty():
-		parts.append("land_" + _edge_letters(land_edges))
-	if not water_edges.is_empty():
-		parts.append("water_" + _edge_letters(water_edges))
-	return "_".join(parts)
-
-
-func _edge_letters(edge_indices: Array) -> String:
-	var out := ""
-	for edge in edge_indices:
-		out += EDGE_LETTERS[int(edge)]
-	return out
-
-
-func _edge_name(edge: int) -> String:
-	return ["NORTH", "EAST", "SOUTH", "WEST"][edge]
-
-
-func _parse_subnets(raw: String) -> Array:
-	var out: Array = []
-	if raw.strip_edges().is_empty():
-		return out
-	for group in raw.split(";"):
-		var token := String(group).strip_edges()
-		if token.is_valid_int() and int(token) != 0:
-			out.append(int(token))
-	return out
+			land_edges.append(EDGE_DIRECTIONS[edge])
+	if land_edges.is_empty():
+		return []
+	if center == CENTER_LAND or center == CENTER_LAKE:
+		return [{"id": "region_0", "edges": land_edges}]
+	var regions: Array = []
+	for index in range(land_edges.size()):
+		regions.append({"id": "region_%d" % index, "edges": [land_edges[index]]})
+	return regions
 
 
 func _edge_kind(token: String) -> int:
-	var s := token.strip_edges()
-	if s.is_valid_int():
-		return clampi(int(s), EMPTY, WATER)
-	match s.to_upper():
-		"LAND":
-			return LAND
-		"WATER":
-			return WATER
-	return EMPTY
+	var value := token.strip_edges()
+	if not value.is_valid_int():
+		return -1
+	return clampi(int(value), EMPTY, RIVER)
 
 
 func _center_kind(token: String) -> int:
-	var s := token.strip_edges()
-	if s.is_valid_int():
-		return int(s)
-	match s.to_upper():
-		"LAND":
-			return 1
-		"LAKE":
-			return 2
-	return 0
+	var value := token.strip_edges()
+	return int(value) if value.is_valid_int() else -1
 
 
 func _split_line(line: String) -> PackedStringArray:
@@ -252,34 +228,6 @@ func _write_json(path: String, spec: Dictionary) -> int:
 	return OK
 
 
-func _rewrite_csv(rows: Array, prefab_by_config: Dictionary) -> int:
-	var prefab_by_row := {}
-	for row in rows:
-		var config_key := _config_key(row["edges"], row["center"])
-		prefab_by_row[row["line_index"]] = prefab_by_config[config_key]
-
-	if not FileAccess.file_exists(CSV_PATH):
-		return ERR_FILE_NOT_FOUND
-	var file := FileAccess.open(CSV_PATH, FileAccess.READ)
-	if file == null:
-		return FileAccess.get_open_error()
-	var lines: Array[String] = []
-	while not file.eof_reached():
-		lines.append(file.get_line())
-	file = null
-
-	for row in rows:
-		var fields: PackedStringArray = row["fields"]
-		var idx: Dictionary = row["idx"]
-		var scene_col := int(idx["prefab_scene"])
-		var rot_col := int(idx["prefab_rotation"])
-		fields[scene_col] = prefab_by_row[row["line_index"]]
-		fields[rot_col] = "0"
-		lines[row["line_index"]] = ",".join(Array(fields))
-
-	var out := FileAccess.open(CSV_PATH, FileAccess.WRITE)
-	if out == null:
-		return FileAccess.get_open_error()
-	for line in lines:
-		out.store_line(line)
-	return OK
+func _fail(message: String) -> void:
+	push_error("GENERATE_GAME_TILES_FAIL: " + message)
+	quit(1)

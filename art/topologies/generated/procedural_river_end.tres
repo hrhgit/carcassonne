@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="TileTopology3D" format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_topology_3d.gd" id="1_fmmu3"]
+
+[resource]
+script = ExtResource("1_fmmu3")
+id = &"river_end"
+edge_markers = PackedInt32Array(0, 0, 0, 3)
+land_region_ids = PackedStringArray()
+land_region_edge_masks = PackedInt32Array()
+water_edges_ending_at_land = PackedInt32Array()
+water_edges_via_central_hub = PackedInt32Array(3)
+visual_geometry_is_verified = true

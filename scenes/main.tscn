@@ -19,7 +19,7 @@ roughness = 0.82
 
 [sub_resource type="BoxMesh" id="MeshTable"]
 material = SubResource("MatTable")
-size = Vector3(60, 0.3, 60)
+size = Vector3(300, 0.3, 300)
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")

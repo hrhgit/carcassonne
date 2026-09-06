@@ -18,7 +18,7 @@ withered_material = SubResource("MatWithered")
 [node name="GrowingParts" type="Node3D" parent="."]
 
 [node name="KenneyTreeDetailed" parent="GrowingParts" instance=ExtResource("2_model")]
-scale = Vector3(0.96, 0.96, 0.96)
+scale = Vector3(2.4, 2.4, 2.4)
 
 [node name="WitheredParts" type="Node3D" parent="."]
 visible = false
@@ -26,4 +26,4 @@ visible = false
 [node name="KenneyTreeDetailedWilted" parent="WitheredParts" instance=ExtResource("2_model")]
 position = Vector3(0.07, 0.01, 0)
 rotation_degrees = Vector3(0, 0, -15)
-scale = Vector3(0.72, 0.72, 0.72)
+scale = Vector3(1.8, 1.8, 1.8)

@@ -1,0 +1,28 @@
+{
+	"center": "hub",
+	"display_name": "程序化：water_three_way",
+	"edges": [
+		"WATER",
+		"WATER",
+		"WATER",
+		"EMPTY"
+	],
+	"id": "water_three_way",
+	"land_regions": [],
+	"river_width": 1.08,
+	"seed": 444290159,
+	"water_routes": [
+		{
+			"from": "NORTH",
+			"via_hub": true
+		},
+		{
+			"from": "EAST",
+			"via_hub": true
+		},
+		{
+			"from": "SOUTH",
+			"via_hub": true
+		}
+	]
+}

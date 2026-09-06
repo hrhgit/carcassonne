@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_mgok2"]
+[ext_resource type="Resource" path="res://art/topologies/generated/procedural_land_single_edge_water_three_way_irrigated.tres" id="2_cw1up"]
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="3_nsxep"]
+[ext_resource type="Resource" path="res://art/planting_masks/generated/procedural_land_single_edge_water_three_way_irrigated_land_region_0_01.tres" id="4_nflyi"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="5_1ebo3"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="6_7c7lj"]
+[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="7_eox1m"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_single_edge_water_three_way_irrigated_land_region_0.tres" id="8_ucece"]
+[ext_resource type="Material" path="res://art/materials/terrain/river_bank.tres" id="9_uljhl"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_single_edge_water_three_way_irrigated_river_bank.tres" id="10_6vo67"]
+[ext_resource type="Material" path="res://art/materials/water/generated/procedural_land_single_edge_water_three_way_irrigated.tres" id="11_3upk7"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_single_edge_water_three_way_irrigated_water.tres" id="12_qn7gs"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_25eci"]
+material = ExtResource("5_1ebo3")
+size = Vector3(4.9, 0.3, 4.9)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ufsvl"]
+material = ExtResource("6_7c7lj")
+size = Vector2(4.9, 4.9)
+
+[node name="LandSingleEdgeWaterThreeWayIrrigated" type="Node3D" unique_id=1849334963]
+script = ExtResource("1_mgok2")
+edge_markers = PackedInt32Array(1, 2, 2, 2)
+topology = ExtResource("2_cw1up")
+require_topology = true
+require_canonical_topology = true
+planting_masks = Array[ExtResource("3_nsxep")]([ExtResource("4_nflyi")])
+
+[node name="Base" type="MeshInstance3D" parent="." unique_id=89372337]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+mesh = SubResource("BoxMesh_25eci")
+
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1755362163]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
+mesh = SubResource("PlaneMesh_ufsvl")
+
+[node name="LandSoil" type="Node3D" parent="." unique_id=1352749067]
+
+[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=52137757]
+material_override = ExtResource("7_eox1m")
+mesh = ExtResource("8_ucece")
+
+[node name="Water" type="Node3D" parent="." unique_id=546560828]
+
+[node name="RiverBed" type="MeshInstance3D" parent="Water" unique_id=807998034]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+material_override = ExtResource("9_uljhl")
+mesh = ExtResource("10_6vo67")
+
+[node name="AnimatedSurface" type="MeshInstance3D" parent="Water" unique_id=1939338432]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+material_override = ExtResource("11_3upk7")
+cast_shadow = 0
+mesh = ExtResource("12_qn7gs")
+
+[node name="Decorations" type="Node3D" parent="." unique_id=1731227311]
+
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=25796972]
+
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=673621460]

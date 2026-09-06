@@ -1,7 +1,9 @@
-## 碧水沃野植物数据模型（规则书 §5）
+## 青菱沃野植物数据模型（规则书 §5）
 ##
 ## 三种植物 + 三种形态 + 每棵植物独立绑定 (species, owner) + 与 tile_cell 强绑定。
-## land_region_id 由 PlantEngine.analyze() 在每次结算时回填（同一个 tile 可能落在不同的 land_region）。
+## land_region_id 由 PlantEngine 在每次结算时回填。一个 tile 可能落在多个
+## land_region（中心 EMPTY 的多 land 边 split 卡）；"多土地地块一次种满"通过
+## 在同一格上为每个 region 各创建一个 Plant 成员实现（共享 tile_cell、不同 region）。
 class_name Plant
 extends RefCounted
 
@@ -12,9 +14,9 @@ enum Species {
 }
 
 enum Form {
-	HEALTHY,      # 健康（V_L ≥ need）—— §5.3
-	WATER_SHORT,  # 缺水（V_L < need）—— §5.4 可逆
-	WITHERED,     # 枯萎（封闭结算或终局升级）—— §5.3 / §5.6 / §5.7 不可逆
+	SURVIVING,  # 存活（闭合结算前的唯一常态）—— §5.3
+	HARVESTED,  # 收获（闭合结算时水量足够）—— §5.3 / §5.6 终局
+	DEAD,       # 死亡（闭合结算时水量不足）—— §5.3 / §5.6 终局
 }
 
 ## 物种 → 需水量（单地块），按规则书 §5.2
@@ -39,9 +41,9 @@ const SPECIES_LABEL := {
 }
 
 const FORM_LABEL := {
-	Form.HEALTHY: "健康",
-	Form.WATER_SHORT: "缺水",
-	Form.WITHERED: "枯萎",
+	Form.SURVIVING: "存活",
+	Form.HARVESTED: "收获",
+	Form.DEAD: "死亡",
 }
 
 
@@ -49,8 +51,9 @@ var id: int = -1                     # 全局唯一 id，由 BoardState 分配
 var species: int = Species.GRASS
 var owner: int = -1                  # 玩家编号（0 / 1）
 var tile_cell: Vector2i = Vector2i.ZERO
-var land_region_id: int = -1         # PlantEngine.analyze() 在每次结算时回填（首次种时为 -1）
-var form: int = Form.HEALTHY         # 当前形态
+var land_region_id: int = -1         # 所属 land_region 的临时 id（每次 analyze 重编号；用 land_subnet_idx 稳定定位）
+var land_subnet_idx: int = 0         # 所在格的 land 子网序号（稳定，用于 split 卡一格多 region 时重新定位）
+var form: int = Form.SURVIVING         # 当前状态
 var expansion_order: int = -1        # §5.8 扩张顺序字段，§7.2.3 末尾由调用方写入
 var seed_committed := true            # 主动种植消耗种子；自动扩张生成的株不重复消耗
 

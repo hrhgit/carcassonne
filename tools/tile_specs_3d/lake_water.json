@@ -1,0 +1,20 @@
+{
+	"center": "lake",
+	"display_name": "程序化：lake_water",
+	"edges": [
+		"EMPTY",
+		"EMPTY",
+		"EMPTY",
+		"WATER"
+	],
+	"id": "lake_water",
+	"land_regions": [],
+	"river_width": 1.08,
+	"seed": 297959460,
+	"water_routes": [
+		{
+			"from": "WEST",
+			"via_hub": true
+		}
+	]
+}

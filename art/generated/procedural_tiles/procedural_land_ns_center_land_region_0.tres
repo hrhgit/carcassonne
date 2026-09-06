@@ -1,0 +1,12 @@
+[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-2.449997, 0.152, -2.449997, 4.899994, 1e-05, 4.899994),
+"attribute_data": PackedByteArray("9v9/PwUvJzX2/38/Co4YPvDQWD/W404+8NBYP9bjTj4leDk/ncqGPswqGz+DV5o+zCobPz/UMj8leDk/spo8P/DQWD8KR0w/8NBYPwpHTD/2/38/fdxZP/b/fz/2/38/9v9/P/b/fz8FLyc19v9/PwUvJzV93Fk/P7wcPgpHTD+3D40+spo8P2iqyT4/1DI/aKrJPoNXmj63D40+ncqGPj+8HD7W404+P7wcPtbjTj4FLyc1Co4YPgUvJzUFLyc1BS8nNQUvJzX2/38/BS8nNfDQWD/W404+zCobPz/UMj/w0Fg/CkdMP/b/fz/2/38/9v9/P/b/fz8FLyc1fdxZPz+8HD4KR0w/aKrJPoNXmj4/vBw+1uNOPgUvJzUFLyc1BS8nNQUvJzXw0Fg/1uNOPswqGz+DV5o+zCobPz/UMj/2/38/9v9/Pz+8HD4KR0w/aKrJPoNXmj4FLyc1BS8nNcwqGz+DV5o+zCobPz/UMj8/vBw+CkdMP2iqyT4/1DI/aKrJPj/UMj9oqsk+g1eaPswqGz+DV5o+zCobP4NXmj7MKhs/P9QyP2iqyT4/1DI/"),
+"format": 34359738391,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 54,
+"vertex_data": PackedByteArray("wMwcQOOlGz7AzBzAwMwcQOOlGz4AKdy/gJnZP+OlGz5A4bq/gJnZP+OlGz5A4bq/wMyMP+OlGz4Ae5S/gB4FP+OlGz4AEHm/gB4FP+OlGz4AEHk/wMyMP+OlGz4Ae5Q/gJnZP+OlGz5A4bo/gJnZP+OlGz5A4bo/wMwcQOOlGz4AKdw/wMwcQOOlGz7AzBxAwMwcQOOlGz7AzBxAwMwcwOOlGz7AzBxAwMwcwOOlGz4AKdw/gJnZv+OlGz5A4bo/wMyMv+OlGz4Ae5Q/gB4Fv+OlGz4AEHk/gB4Fv+OlGz4AEHm/wMyMv+OlGz4Ae5S/gJnZv+OlGz5A4bq/gJnZv+OlGz5A4bq/wMwcwOOlGz4AKdy/wMwcwOOlGz7AzBzAwMwcwOOlGz7AzBzAwMwcQOOlGz7AzBzAgJnZP+OlGz5A4bq/gB4FP+OlGz4AEHk/gJnZP+OlGz5A4bo/wMwcQOOlGz7AzBxAwMwcQOOlGz7AzBxAwMwcwOOlGz4AKdw/gJnZv+OlGz5A4bo/gB4Fv+OlGz4AEHm/gJnZv+OlGz5A4bq/wMwcwOOlGz7AzBzAwMwcwOOlGz7AzBzAgJnZP+OlGz5A4bq/gB4FP+OlGz4AEHm/gB4FP+OlGz4AEHk/wMwcQOOlGz7AzBxAgJnZv+OlGz5A4bo/gB4Fv+OlGz4AEHm/wMwcwOOlGz7AzBzAgB4FP+OlGz4AEHm/gB4FP+OlGz4AEHk/gJnZv+OlGz5A4bo/gB4Fv+OlGz4AEHk/gB4Fv+OlGz4AEHk/gB4Fv+OlGz4AEHm/gB4FP+OlGz4AEHm/gB4FP+OlGz4AEHm/gB4FP+OlGz4AEHk/gB4Fv+OlGz4AEHk//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+//3///wAA/7//f///AAD/v/9///8AAP+/")
+}]

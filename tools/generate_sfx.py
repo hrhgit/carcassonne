@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-generate_sfx.py — 为「碧水沃野 - 地块拼接」程序化生成游戏音效。
+generate_sfx.py — 为「青菱沃野 - 地块拼接」程序化生成游戏音效。
 
 用法：
     python generate_sfx.py [--out DIR]
@@ -356,7 +356,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>碧水沃野 · 音效试听</title>
+<title>青菱沃野 · 音效试听</title>
 <style>
   :root {{ color-scheme: light; }}
   * {{ box-sizing: border-box; }}
@@ -379,7 +379,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 <div class="wrap">
-  <h1>碧水沃野 <span>· 程序化音效试听</span></h1>
+  <h1>青菱沃野 <span>· 程序化音效试听</span></h1>
   <div class="sub">
     共 {count} 个音效，位于 <code>audio/sfx/</code>（44.1kHz / 16-bit 单声道 WAV，Godot 可直接导入）。<br>
     已注册 Autoload <code>Sfx</code>，在任意脚本中调用：<code>Sfx.play("tile_place")</code>；
@@ -423,7 +423,7 @@ def build_html(sounds, out_path):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     default_out = os.path.normpath(os.path.join(here, "..", "audio", "sfx"))
-    parser = argparse.ArgumentParser(description="生成碧水沃野游戏音效")
+    parser = argparse.ArgumentParser(description="生成青菱沃野游戏音效")
     parser.add_argument("--out", default=default_out, help="WAV 输出目录")
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)

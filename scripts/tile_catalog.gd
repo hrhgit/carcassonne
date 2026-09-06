@@ -2,21 +2,23 @@ class_name TileCatalog
 extends Node
 
 const TILE_DEFINITION_SCRIPT := preload("res://scripts/tile_definition.gd")
-const TILES_CSV_PATH := "res://data/tiles_classic.csv"
+const TILES_CSV_PATH := "res://data/tiles.csv"
+const GENERATED_PREFAB_TEMPLATE := "res://scenes/tiles_3d/generated/procedural_%s.tscn"
 
 const EMPTY := TileDefinition.EdgeKind.EMPTY
 const LAND := TileDefinition.EdgeKind.LAND
 const WATER := TileDefinition.EdgeKind.WATER
 const RIVER := TileDefinition.EdgeKind.RIVER
-const BANK := TileDefinition.EdgeKind.BANK
 
 const CENTER_EMPTY := TileDefinition.CenterKind.EMPTY
 const CENTER_LAND := TileDefinition.CenterKind.LAND
-const CENTER_LAKE := TileDefinition.CenterKind.LAKE
 const CENTER_RIVER := TileDefinition.CenterKind.RIVER
+const REQUIRED_COLUMNS := ["id", "display_name", "card_type", "count",
+	"N", "E", "S", "W", "N_ir", "E_ir", "S_ir", "W_ir", "center"]
 
 # 缓存解析后的所有定义（去重：同 id 只构造一次）
 var _definitions: Dictionary = {}
+var _definition_ids: Array[StringName] = []
 var _starter_id: StringName = &""
 
 
@@ -37,9 +39,9 @@ func starter_tile() -> TileDefinition:
 
 
 func build_deck(card_type: int = TileDefinition.CARD_TILE) -> Array[TileDefinition]:
-	# 按 count 展开成实际牌堆数组
+	# 按 count 展开成实际牌堆数组，保留表内顺序供配置检查和确定性测试使用。
 	var deck: Array[TileDefinition] = []
-	for def_id in _definitions.keys():
+	for def_id in _definition_ids:
 		var def: TileDefinition = _definitions[def_id]
 		if def.card_type != card_type:
 			continue
@@ -48,8 +50,43 @@ func build_deck(card_type: int = TileDefinition.CARD_TILE) -> Array[TileDefiniti
 	return deck
 
 
-func river_setup_deck() -> Array[TileDefinition]:
-	return build_deck(TileDefinition.CARD_RIVER)
+func build_shuffled_deck(
+	card_type: int = TileDefinition.CARD_TILE,
+	random_source: RandomNumberGenerator = null,
+) -> Array[TileDefinition]:
+	var deck := build_deck(card_type)
+	_shuffle_in_place(deck, random_source)
+	return deck
+
+
+# 开局河头是棋盘上的 starter_river；河流牌堆只洗中段，表中唯一的
+# river_setup_terminal 始终留在末尾，作为与河头同款的河尾。
+func river_setup_deck(random_source: RandomNumberGenerator = null) -> Array[TileDefinition]:
+	var middle: Array[TileDefinition] = []
+	var terminals: Array[TileDefinition] = []
+	for definition in build_deck(TileDefinition.CARD_RIVER):
+		if definition.river_setup_terminal:
+			terminals.append(definition)
+		else:
+			middle.append(definition)
+	if terminals.size() != 1:
+		push_error("River setup deck requires exactly one river_setup_terminal, found %d." % terminals.size())
+		return []
+	_shuffle_in_place(middle, random_source)
+	middle.append(terminals[0])
+	return middle
+
+
+func _shuffle_in_place(deck: Array[TileDefinition], random_source: RandomNumberGenerator = null) -> void:
+	var rng := random_source
+	if rng == null:
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
+	for index in range(deck.size() - 1, 0, -1):
+		var swap_index := rng.randi_range(0, index)
+		var held := deck[index]
+		deck[index] = deck[swap_index]
+		deck[swap_index] = held
 
 
 func has_definition(id: StringName) -> bool:
@@ -62,7 +99,7 @@ func get_definition(id: StringName) -> TileDefinition:
 
 func all_definitions() -> Array[TileDefinition]:
 	var list: Array[TileDefinition] = []
-	for def_id in _definitions.keys():
+	for def_id in _definition_ids:
 		list.append(_definitions[def_id])
 	return list
 
@@ -71,12 +108,22 @@ func all_definitions() -> Array[TileDefinition]:
 
 func _load_from_csv() -> void:
 	_definitions.clear()
-	if not FileAccess.file_exists(TILES_CSV_PATH):
+	_definition_ids.clear()
+	_starter_id = &""
+	var csv_path := TILES_CSV_PATH
+	if not FileAccess.file_exists(csv_path):
+		# CSV Translation imports intentionally omit their source text from a PCK.
+		# Keep exported builds self-contained by accepting the raw table next to the
+		# executable; editor runs continue to use the canonical res:// path.
+		var external_csv_path := OS.get_executable_path().get_base_dir().path_join("data/tiles.csv")
+		if FileAccess.file_exists(external_csv_path):
+			csv_path = external_csv_path
+	if not FileAccess.file_exists(csv_path):
 		push_error("Tile CSV missing: %s" % TILES_CSV_PATH)
 		return
-	var file := FileAccess.open(TILES_CSV_PATH, FileAccess.READ)
+	var file := FileAccess.open(csv_path, FileAccess.READ)
 	if file == null:
-		push_error("Cannot open %s (err %d)" % [TILES_CSV_PATH, FileAccess.get_open_error()])
+		push_error("Cannot open %s (err %d)" % [csv_path, FileAccess.get_open_error()])
 		return
 
 	var header_line := ""
@@ -84,6 +131,9 @@ func _load_from_csv() -> void:
 	# 跳过顶部注释行（# 开头），找到首条数据 header
 	while not file.eof_reached():
 		header_line = file.get_line()
+		# 兼容带 UTF-8 BOM 的文件（Excel 友好）：去掉首行 BOM 再判注释
+		if header_line.begins_with(String.chr(0xFEFF)):
+			header_line = header_line.substr(1)
 		line_number += 1
 		if header_line.strip_edges().is_empty():
 			continue
@@ -91,6 +141,9 @@ func _load_from_csv() -> void:
 			break
 	var headers := _parse_csv_line(header_line)
 	var column_index := _index_columns(headers)
+	if column_index.is_empty():
+		return
+	var required_field_count := _required_field_count(column_index)
 
 	while not file.eof_reached():
 		var line := file.get_line()
@@ -98,7 +151,7 @@ func _load_from_csv() -> void:
 		if line.strip_edges().is_empty() or line.begins_with("#"):
 			continue
 		var fields := _parse_csv_line(line)
-		if fields.size() < headers.size():
+		if fields.size() < required_field_count:
 			push_warning("Skipping short row %d: %s" % [line_number, line])
 			continue
 		var def := _build_definition_from_row(fields, column_index)
@@ -108,6 +161,7 @@ func _load_from_csv() -> void:
 			push_warning("Duplicate tile id %s in CSV; keeping the first one." % def.id)
 			continue
 		_definitions[def.id] = def
+		_definition_ids.append(def.id)
 		if def.card_type == TileDefinition.CARD_STARTER:
 			_starter_id = def.id
 
@@ -121,18 +175,26 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 	var edges := _parse_edge_list(fields, idx)
 	var ir_edges := _parse_ir_list(fields, idx)
 	var center := _parse_center(fields[idx["center"]])
-	var is_river_tile := fields[idx["is_river_tile"]] == "1"
-	var visual_seed := int(fields[idx["visual_seed"]])
-	var prefab_rotation := int(fields[idx["prefab_rotation"]])
-	var initial_growth := fields[idx["initial_growth"]] == "1"
-	var notes := fields[idx["notes"]]
+	var is_river_tile := _field(fields, idx, "is_river_tile") == "1" \
+		or card_type == TileDefinition.CARD_RIVER or center == CENTER_RIVER
+	var visual_seed := int(_field(fields, idx, "visual_seed", str(abs(String(id).hash()))))
+	var prefab_rotation := int(_field(fields, idx, "prefab_rotation", "0"))
+	var initial_growth := _field(fields, idx, "initial_growth", "0") == "1"
+	var notes := _field(fields, idx, "notes", "新卡牌表生成定义")
+	var river_setup_terminal := _field(fields, idx, "river_setup_terminal", "0") == "1"
 
 	# 内部连通性：CSV 用整数位掩码表示一个子网，多个子网用 ; 分隔。
 	# 位分配：bit0=N bit1=E bit2=S bit3=W；例如 15=NESW 一个子网；"1;2" = N+E 两个独立子网。
 	var water_subnets := _parse_subnet_mask(fields, idx, "water_subnets")
 	var land_subnets := _parse_subnet_mask(fields, idx, "land_subnets")
+	if water_subnets.is_empty():
+		water_subnets = _derived_subnets(edges, WATER, true)
+	if land_subnets.is_empty():
+		land_subnets = _derived_subnets(edges, LAND, center == CENTER_LAND)
 
-	var scene_path := fields[idx["prefab_scene"]]
+	var scene_path := _field(fields, idx, "prefab_scene")
+	if scene_path.is_empty():
+		scene_path = GENERATED_PREFAB_TEMPLATE % id
 	var scene: PackedScene = null
 	if scene_path != "":
 		if ResourceLoader.exists(scene_path):
@@ -164,6 +226,7 @@ func _build_definition_from_row(fields: PackedStringArray, idx: Dictionary) -> T
 		notes,
 		water_subnets,
 		land_subnets,
+		river_setup_terminal,
 	)
 
 	if not def.is_playable():
@@ -176,16 +239,20 @@ func _index_columns(headers: PackedStringArray) -> Dictionary:
 	var idx := {}
 	for i in range(headers.size()):
 		idx[headers[i]] = i
-	# 必要列缺失即报错
-	var required := ["id", "display_name", "card_type", "count",
-		"N", "E", "S", "W", "N_ir", "E_ir", "S_ir", "W_ir",
-		"center", "is_river_tile", "prefab_scene", "prefab_rotation",
-		"visual_seed", "initial_growth", "notes",
-		"water_subnets", "land_subnets"]
-	for col in required:
+	# 新卡牌表是紧凑规则表；其余可视化和连通性字段由固定的生成物及
+	# 这里的确定性默认值补齐。扩展列仍可按旧格式显式覆盖。
+	for col in REQUIRED_COLUMNS:
 		if not idx.has(col):
 			push_error("CSV missing required column '%s'" % col)
+			return {}
 	return idx
+
+
+func _required_field_count(idx: Dictionary) -> int:
+	var count := 0
+	for col in REQUIRED_COLUMNS:
+		count = maxi(count, int(idx[col]) + 1)
+	return count
 
 
 func _parse_csv_line(line: String) -> PackedStringArray:
@@ -194,6 +261,33 @@ func _parse_csv_line(line: String) -> PackedStringArray:
 	for piece in line.split(","):
 		out.append(String(piece).strip_edges())
 	return out
+
+
+func _field(fields: PackedStringArray, idx: Dictionary, column: String, fallback := "") -> String:
+	if not idx.has(column):
+		return fallback
+	var field_index := int(idx[column])
+	if field_index < 0 or field_index >= fields.size():
+		return fallback
+	var value := fields[field_index].strip_edges()
+	return value if not value.is_empty() else fallback
+
+
+func _derived_subnets(edges: PackedInt32Array, kind: int, merge_all: bool) -> Array:
+	var mask := 0
+	for edge in range(4):
+		if edges[edge] == kind:
+			mask |= 1 << edge
+	if mask == 0:
+		return []
+	if merge_all:
+		return [mask]
+	var subnets: Array = []
+	for edge in range(4):
+		var bit := 1 << edge
+		if (mask & bit) != 0:
+			subnets.append(bit)
+	return subnets
 
 
 func _parse_edge_list(fields: PackedStringArray, idx: Dictionary) -> PackedInt32Array:
@@ -228,7 +322,6 @@ func _parse_edge_kind(token: String) -> int:
 		"LAND":  return LAND
 		"WATER": return WATER
 		"RIVER": return RIVER
-		"BANK":  return BANK
 	return -1
 
 
@@ -242,7 +335,6 @@ func _parse_center(token: String) -> int:
 	match s.to_upper():
 		"EMPTY": return CENTER_EMPTY
 		"LAND":  return CENTER_LAND
-		"LAKE":  return CENTER_LAKE
 		"RIVER": return CENTER_RIVER
 	return CENTER_EMPTY
 

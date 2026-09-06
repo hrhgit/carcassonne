@@ -7,8 +7,12 @@
   "water_port_width": 0.48,
   "water_height": 0.151,
   "water_meadow_clearance": 0.010999999999999982,
+  "water_edge_seal_floor": -0.012,
+  "riverbed_edge_inset": 0.04,
+  "riverbed_end_inset": 0.04,
+  "riverbed_min_submergence": 0.006,
   "water_land_height": 0.193,
-  "shoreline_length": 4.106006,
+  "shoreline_length": 4.58482,
   "land_slope_outset": 0.24,
   "land_meadow_clearance": 0.014,
   "land_meadow_relief_fade": 0.18,
@@ -114,12 +118,12 @@
       0.924
     ],
     [
-      0.04,
-      0.82
+      0.1,
+      0.73
     ],
     [
-      0.08,
-      0.75
+      0.18,
+      0.58
     ]
   ],
   "geometry_language": "convex LAND polygon and polyline WATER bands",

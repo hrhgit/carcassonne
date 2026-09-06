@@ -36,6 +36,16 @@ WATER_OVER_MEADOW_CLEARANCE = WATER_HEIGHT - MEADOW_HEIGHT
 WATER_HEIGHT_SAMPLE_ACROSS = 16
 WATER_HEIGHT_SAMPLE_ALONG = 8
 WATER_PORT_WIDTH = 0.48
+# RiverBed remains a fully submerged support layer.  It is narrower than the
+# visible blue water at every cross-section, so it cannot leak a grey/brown
+# stripe beside the foam when the prefab is viewed from above.
+RIVERBED_EDGE_INSET = 0.040
+RIVERBED_END_INSET = 0.040
+RIVERBED_MIN_SUBMERGENCE = 0.006
+# AnimatedSurface is intentionally above the relief.  Its perimeter seal runs
+# into the base so a grazing camera never sees an air slit between water and
+# meadow/LAND; terrain simply occludes the lower portion of this water wall.
+WATER_EDGE_SEAL_FLOOR = -0.012
 LAND_SLOPE_OUTSET = 0.24
 PLANTING_BOUNDARY_SCALE = 0.80
 LAND_MEADOW_CLEARANCE = 0.014
@@ -375,16 +385,31 @@ def _build_land() -> bpy.types.Object:
 def _river_path() -> list[tuple[float, float]]:
     # Straight SOUTH lock section followed by three visible polygonal turns.
     # The contact point meets the convex LAND frontier at x=0; the last two
-    # points form a short tapered irrigation tongue above the soil surface.
+    # points form a clear, still-narrow irrigation mouth inside the flat soil
+    # surface instead of tapering away beside the outer slope.
     return [
         (0.0, TILE_HALF_SIZE),
         (0.0, 2.10),
         (-0.08, 1.74),
         (0.06, 1.35),
         (0.0, 0.924),
-        (0.04, 0.82),
-        (0.08, 0.75),
+        (0.10, 0.73),
+        (0.18, 0.58),
     ]
+
+
+def _inset_path_endpoints(path: Sequence[tuple[float, float]], inset: float) -> list[tuple[float, float]]:
+    """Inset the hidden RiverBed from both water end caps as well as banks."""
+    result = [Vector(point) for point in path]
+    if len(result) < 2:
+        return list(path)
+    first = result[1] - result[0]
+    if first.length > 1e-6:
+        result[0] += first.normalized() * min(inset, first.length * 0.45)
+    last = result[-2] - result[-1]
+    if last.length > 1e-6:
+        result[-1] += last.normalized() * min(inset, last.length * 0.45)
+    return [(point.x, point.y) for point in result]
 
 
 def _path_frames(path: Sequence[tuple[float, float]]) -> tuple[list[Vector], list[Vector], list[float]]:
@@ -403,7 +428,7 @@ def _path_frames(path: Sequence[tuple[float, float]]) -> tuple[list[Vector], lis
 
 def _water_width(progress: float, row: int, row_count: int) -> float:
     del progress
-    width_factors = (1.0, 1.0, 0.90, 0.82, 0.72, 0.48, 0.24)
+    width_factors = (1.0, 1.0, 0.90, 0.82, 0.72, 0.58, 0.42)
     if row_count != len(width_factors):
         raise RuntimeError("polygonal WATER width profile must match the authored path")
     return WATER_PORT_WIDTH * width_factors[row]
@@ -452,19 +477,29 @@ def _water_surface_height(
     return max(base_height, _meadow_peak_around_water_row(points, normals, widths, row) + WATER_OVER_MEADOW_CLEARANCE)
 
 
+def _riverbed_width(water_width: float) -> float:
+    # The factor fallback keeps a useful underlay for future tapered routes
+    # while preserving a positive inset at every possible width.
+    return max(water_width - RIVERBED_EDGE_INSET * 2.0, water_width * 0.25)
+
+
 def _build_river_bed() -> bpy.types.Object:
-    points, normals, cumulative = _path_frames(_river_path())
+    water_points, water_normals, water_cumulative = _path_frames(_river_path())
+    points, normals, cumulative = _path_frames(_inset_path_endpoints(_river_path(), RIVERBED_END_INSET))
     total = cumulative[-1]
+    water_total = water_cumulative[-1]
     cross = (-1.0, -0.58, 0.0, 0.58, 1.0)
     vertices: list[tuple[float, float, float]] = []
     uv: list[tuple[float, float]] = []
+    widths = [_water_width(water_cumulative[row] / water_total, row, len(points)) for row in range(len(points))]
+    surface_heights = [_water_surface_height(water_points, water_normals, widths, row) for row in range(len(points))]
     for row, point in enumerate(points):
         progress = cumulative[row] / total
-        water_width = _water_width(progress, row, len(points))
-        bank_width = water_width + 0.26
-        # The bank lips sit just below the surface, while the channel centre is
-        # genuinely recessed.  This gives the depth-aware foam a narrow bank
-        # contact and guarantees a clear-water centre.
+        water_width = widths[row]
+        riverbed_width = _riverbed_width(water_width)
+        # The bed stays below the water surface at all points.  It still has a
+        # recessed centre for depth-aware foam, but is no longer an exposed
+        # outer bank with an unrelated grey material.
         heights = (MEADOW_HEIGHT + 0.003, 0.132, 0.064, 0.132, MEADOW_HEIGHT + 0.003)
         if row == len(points) - 4:
             heights = (0.154, 0.147, 0.118, 0.147, 0.154)
@@ -474,13 +509,11 @@ def _build_river_bed() -> bpy.types.Object:
             heights = (SOIL_HEIGHT + 0.002, SOIL_HEIGHT - 0.004, SOIL_HEIGHT - 0.014, SOIL_HEIGHT - 0.004, SOIL_HEIGHT + 0.002)
         elif row == len(points) - 1:
             heights = (SOIL_HEIGHT + 0.002, SOIL_HEIGHT - 0.002, SOIL_HEIGHT - 0.008, SOIL_HEIGHT - 0.002, SOIL_HEIGHT + 0.002)
+        heights = tuple(min(height, surface_heights[row] - RIVERBED_MIN_SUBMERGENCE) for height in heights)
         for column, factor in enumerate(cross):
-            offset = normals[row] * (bank_width * 0.5 * factor)
+            offset = normals[row] * (riverbed_width * 0.5 * factor)
             sample = point + offset
             height = heights[column]
-            if row <= 2:
-                # The SOUTH lock band is identical for every matching port.
-                height = heights[column]
             vertices.append(_to_blender((sample.x, sample.y), height))
             uv.append((progress, (factor + 1.0) * 0.5))
     faces: list[tuple[int, int, int, int]] = []
@@ -525,6 +558,38 @@ def _build_water() -> tuple[bpy.types.Object, float]:
         for column in range(columns - 1):
             a = row * columns + column
             faces.append((a, a + 1, a + columns + 1, a + columns))
+
+    def append_edge_seal_quad(top_a: int, top_b: int) -> None:
+        """Close one visible water edge down into the tile base.
+
+        These faces deliberately duplicate the top vertices so the water top
+        remains smooth while every side stays a clean low-poly water wall.
+        They use the same baked d/s coordinate as their top edge, preserving
+        the one shoreline phase for the foam mask.
+        """
+        base = len(vertices)
+        for top_index in (top_a, top_b):
+            top = vertices[top_index]
+            vertices.append(top)
+            uv0.append(uv0[top_index])
+            uv1.append(uv1[top_index])
+        for top_index in (top_b, top_a):
+            top = vertices[top_index]
+            vertices.append((top[0], top[1], WATER_EDGE_SEAL_FLOOR))
+            uv0.append(uv0[top_index])
+            uv1.append(uv1[top_index])
+        faces.append((base, base + 1, base + 2, base + 3))
+
+    # Both riverbanks and the two capped ends receive a continuous seal.  The
+    # mesh is opaque and cull-disabled in Godot, so its exact winding does not
+    # affect visibility while the copied UV2 preserves the shared foam phase.
+    for row in range(len(points) - 1):
+        append_edge_seal_quad(row * columns, (row + 1) * columns)
+        append_edge_seal_quad(row * columns + columns - 1, (row + 1) * columns + columns - 1)
+    for column in range(columns - 1):
+        append_edge_seal_quad(column, column + 1)
+        last_row = (len(points) - 1) * columns
+        append_edge_seal_quad(last_row + column + 1, last_row + column)
     shoreline_length = 2.0 * total + widths[0] + widths[-1]
     return _new_mesh_object("AnimatedSurface", vertices, faces, smooth=True, uv0=uv0, uv1=uv1), shoreline_length
 
@@ -552,6 +617,10 @@ def _save_outputs(blend_path: Path, glb_path: Path, manifest_path: Path, shoreli
         "water_port_width": WATER_PORT_WIDTH,
         "water_height": WATER_HEIGHT,
         "water_meadow_clearance": WATER_OVER_MEADOW_CLEARANCE,
+        "water_edge_seal_floor": WATER_EDGE_SEAL_FLOOR,
+        "riverbed_edge_inset": RIVERBED_EDGE_INSET,
+        "riverbed_end_inset": RIVERBED_END_INSET,
+        "riverbed_min_submergence": RIVERBED_MIN_SUBMERGENCE,
         "water_land_height": SOIL_HEIGHT + 0.003,
         "shoreline_length": round(shoreline_length, 6),
         "land_slope_outset": LAND_SLOPE_OUTSET,

@@ -1,0 +1,34 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_adjacent_edges_irrigated",
+	"edges": [
+		"LAND",
+		"LAND",
+		"WATER",
+		"WATER"
+	],
+	"id": "land_adjacent_edges_irrigated",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH",
+				"EAST"
+			],
+			"id": "region_0"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 1749143742,
+	"water_routes": [
+		{
+			"from": "SOUTH",
+			"to_region": "region_0",
+			"via_hub": true
+		},
+		{
+			"from": "WEST",
+			"to_region": "region_0",
+			"via_hub": true
+		}
+	]
+}

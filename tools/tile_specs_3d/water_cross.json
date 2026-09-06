@@ -1,0 +1,32 @@
+{
+	"center": "hub",
+	"display_name": "程序化：water_cross",
+	"edges": [
+		"WATER",
+		"WATER",
+		"WATER",
+		"WATER"
+	],
+	"id": "water_cross",
+	"land_regions": [],
+	"river_width": 1.08,
+	"seed": 2619883025,
+	"water_routes": [
+		{
+			"from": "NORTH",
+			"via_hub": true
+		},
+		{
+			"from": "EAST",
+			"via_hub": true
+		},
+		{
+			"from": "SOUTH",
+			"via_hub": true
+		},
+		{
+			"from": "WEST",
+			"via_hub": true
+		}
+	]
+}

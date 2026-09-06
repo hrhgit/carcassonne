@@ -1,0 +1,39 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_opposite_edges_irrigated_split",
+	"edges": [
+		"LAND",
+		"WATER",
+		"LAND",
+		"WATER"
+	],
+	"id": "land_opposite_edges_irrigated_split",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH"
+			],
+			"id": "region_0"
+		},
+		{
+			"edges": [
+				"SOUTH"
+			],
+			"id": "region_1"
+		}
+	],
+	"river_width": 1.08,
+	"seed": 2129365378,
+	"water_routes": [
+		{
+			"from": "EAST",
+			"to_region": "region_0",
+			"via_hub": true
+		},
+		{
+			"from": "WEST",
+			"to_region": "region_0",
+			"via_hub": true
+		}
+	]
+}

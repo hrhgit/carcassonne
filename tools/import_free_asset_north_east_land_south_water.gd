@@ -46,6 +46,11 @@ const ROCK_C := preload("res://art/models/kaykit/forest_free/Rock_3_A_Color1.glt
 const TILE_HALF_SIZE := 2.45
 const WATER_PORT_HALF_WIDTH := 0.24
 const POSITION_EPSILON := 0.0002
+const LAND_SURFACE_HEIGHT := 0.190
+const RIVERBED_EDGE_INSET := 0.040
+const RIVERBED_END_INSET := 0.040
+const RIVERBED_MIN_SUBMERGENCE := 0.006
+const WATER_EDGE_SEAL_FLOOR := -0.012
 
 
 func _init() -> void:
@@ -138,7 +143,7 @@ func _load_manifest() -> Dictionary:
 		_fail("Could not open Blender manifest.")
 		return {}
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary or float(parsed.get("water_port_width", 0.0)) != WATER_PORT_HALF_WIDTH * 2.0 or float(parsed.get("shoreline_length", 0.0)) <= 0.0 or float(parsed.get("land_slope_outset", 0.0)) < 0.20 or not parsed.has("planting_boundary") or parsed.get("geometry_language", "") != "convex LAND polygon and polyline WATER bands":
+	if not parsed is Dictionary or float(parsed.get("water_port_width", 0.0)) != WATER_PORT_HALF_WIDTH * 2.0 or float(parsed.get("shoreline_length", 0.0)) <= 0.0 or float(parsed.get("water_edge_seal_floor", 0.0)) > WATER_EDGE_SEAL_FLOOR + POSITION_EPSILON or float(parsed.get("riverbed_edge_inset", 0.0)) < RIVERBED_EDGE_INSET - POSITION_EPSILON or float(parsed.get("riverbed_end_inset", 0.0)) < RIVERBED_END_INSET - POSITION_EPSILON or float(parsed.get("riverbed_min_submergence", 0.0)) < RIVERBED_MIN_SUBMERGENCE - POSITION_EPSILON or float(parsed.get("land_slope_outset", 0.0)) < 0.20 or not parsed.has("planting_boundary") or parsed.get("geometry_language", "") != "convex LAND polygon and polyline WATER bands":
 		_fail("Blender manifest lost the canonical water width or shoreline length.")
 		return {}
 	return parsed
@@ -193,8 +198,8 @@ func _save_terrain_materials() -> bool:
 	soil.set_shader_parameter("face_contrast", 0.015)
 	soil.set_shader_parameter("slope_shadow", 0.10)
 	var bank := BANK_MATERIAL.duplicate(true) as StandardMaterial3D
-	bank.resource_name = "Free V2 River Bank"
-	bank.albedo_color = Color(0.30, 0.29, 0.235, 1.0)
+	bank.resource_name = "Free V2 Submerged Riverbed"
+	bank.albedo_color = Color(0.105, 0.175, 0.075, 1.0)
 	var grass := StandardMaterial3D.new()
 	grass.resource_name = "Muted KayKit Grass"
 	grass.albedo_color = Color(0.12, 0.22, 0.065, 1.0)
@@ -221,6 +226,7 @@ func _save_terrain_materials() -> bool:
 func _validate_edge_contract(meshes: Dictionary) -> bool:
 	var meadow := meshes["Meadow"] as ArrayMesh
 	var land := meshes["NorthEastField"] as ArrayMesh
+	var riverbed := meshes["RiverBed"] as ArrayMesh
 	var water := meshes["AnimatedSurface"] as ArrayMesh
 	var meadow_vertices: PackedVector3Array = meadow.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	var land_arrays := land.surface_get_arrays(0)
@@ -279,6 +285,9 @@ func _validate_edge_contract(meshes: Dictionary) -> bool:
 	if not water_reaches_land:
 		_fail("The polygonal WATER tongue does not visibly rise onto the LAND contact.")
 		return false
+	if not _water_has_broad_land_mouth(water, land):
+		_fail("The WATER tongue no longer makes a broad, direct contact on the flat LAND surface.")
+		return false
 	for vertex in meadow_vertices:
 		if is_equal_approx(absf(vertex.x), TILE_HALF_SIZE) or is_equal_approx(absf(vertex.z), TILE_HALF_SIZE):
 			if absf(vertex.y - 0.14) > POSITION_EPSILON:
@@ -302,6 +311,13 @@ func _validate_edge_contract(meshes: Dictionary) -> bool:
 	south_edge_x.sort()
 	if south_edge_x.is_empty() or absf(south_edge_x[0] + WATER_PORT_HALF_WIDTH) > POSITION_EPSILON or absf(south_edge_x[-1] - WATER_PORT_HALF_WIDTH) > POSITION_EPSILON:
 		_fail("SOUTH water port is not centred at the canonical 0.48 width: %s" % south_edge_x)
+		return false
+	if not _has_water_edge_seal(water):
+		_fail("AnimatedSurface lost its continuous terrain-buried edge seal.")
+		return false
+	var riverbed_submergence := _minimum_surface_submergence(riverbed, water)
+	if riverbed_submergence == -INF or riverbed_submergence < RIVERBED_MIN_SUBMERGENCE - POSITION_EPSILON:
+		_fail("RiverBed escaped the visible AnimatedSurface or rose too high (minimum submergence %.5f)." % riverbed_submergence)
 		return false
 	return true
 
@@ -408,6 +424,69 @@ func _is_covered(mesh: ArrayMesh, probe: Vector2) -> bool:
 		if _point_in_triangle(probe, Vector2(a.x, a.z), Vector2(b.x, b.z), Vector2(c.x, c.z)):
 			return true
 	return false
+
+
+func _minimum_surface_submergence(underlay: ArrayMesh, surface: ArrayMesh) -> float:
+	var arrays := underlay.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
+	var minimum_submergence := INF
+	for index in range(0, triangle_indices.size(), 3):
+		var a := vertices[triangle_indices[index]]
+		var b := vertices[triangle_indices[index + 1]]
+		var c := vertices[triangle_indices[index + 2]]
+		for sample in [a, b, c, (a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5, (a + b + c) / 3.0]:
+			var surface_height := _surface_height_at(surface, Vector2(sample.x, sample.z))
+			if surface_height == INF:
+				return -INF
+			minimum_submergence = minf(minimum_submergence, surface_height - sample.y)
+	return minimum_submergence
+
+
+func _has_water_edge_seal(mesh: ArrayMesh) -> bool:
+	var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var floor_vertices := 0
+	for vertex in vertices:
+		if vertex.y <= WATER_EDGE_SEAL_FLOOR + POSITION_EPSILON:
+			floor_vertices += 1
+	return floor_vertices >= 20
+
+
+func _water_has_broad_land_mouth(water: ArrayMesh, land: ArrayMesh) -> bool:
+	var water_vertices: PackedVector3Array = water.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var contact_samples := 0
+	for vertex in water_vertices:
+		if vertex.y < LAND_SURFACE_HEIGHT + 0.002:
+			continue
+		var land_height := _surface_height_at(land, Vector2(vertex.x, vertex.z))
+		if land_height >= LAND_SURFACE_HEIGHT - POSITION_EPSILON:
+			contact_samples += 1
+	return contact_samples >= 5
+
+
+func _surface_height_at(mesh: ArrayMesh, probe: Vector2) -> float:
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var triangle_indices := indices if not indices.is_empty() else PackedInt32Array(range(vertices.size()))
+	# AnimatedSurface also carries vertical perimeter seals. A projected probe
+	# can meet more than one horizontal facet at a shared edge; keep the upper
+	# water sheet instead of relying on imported triangle order.
+	var highest_surface := -INF
+	for index in range(0, triangle_indices.size(), 3):
+		var a := vertices[triangle_indices[index]]
+		var b := vertices[triangle_indices[index + 1]]
+		var c := vertices[triangle_indices[index + 2]]
+		var denominator := (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z)
+		if absf(denominator) <= POSITION_EPSILON:
+			continue
+		var weight_a := ((b.z - c.z) * (probe.x - c.x) + (c.x - b.x) * (probe.y - c.z)) / denominator
+		var weight_b := ((c.z - a.z) * (probe.x - c.x) + (a.x - c.x) * (probe.y - c.z)) / denominator
+		var weight_c := 1.0 - weight_a - weight_b
+		if weight_a >= -POSITION_EPSILON and weight_b >= -POSITION_EPSILON and weight_c >= -POSITION_EPSILON:
+			highest_surface = maxf(highest_surface, a.y * weight_a + b.y * weight_b + c.y * weight_c)
+	return INF if highest_surface == -INF else highest_surface
 
 
 func _point_in_triangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2) -> bool:

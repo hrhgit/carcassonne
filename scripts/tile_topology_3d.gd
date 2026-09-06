@@ -14,6 +14,7 @@ enum EdgeKind {
 	EMPTY,
 	LAND,
 	WATER,
+	RIVER,
 }
 
 enum DoubleLandTopology {
@@ -44,11 +45,23 @@ func is_structurally_valid() -> bool:
 	if id.is_empty() or edge_markers.size() != 4:
 		return false
 	for marker in edge_markers:
-		if marker < EdgeKind.EMPTY or marker > EdgeKind.WATER:
+		if marker < EdgeKind.EMPTY or marker > EdgeKind.RIVER:
 			return false
 
 	var land_mask := _marker_mask(EdgeKind.LAND)
 	var water_mask := _marker_mask(EdgeKind.WATER)
+	var river_mask := _marker_mask(EdgeKind.RIVER)
+	# A river prefab carries no LAND. Its wider RIVER ports remain outside the
+	# ordinary WATER network, while optional narrow WATER branches may leave the
+	# central river hub and join the small-water network through matching ports.
+	if river_mask != 0:
+		if river_mask == 0 or land_mask != 0:
+			return false
+		if not land_region_ids.is_empty() or not land_region_edge_masks.is_empty():
+			return false
+		if double_land_topology != DoubleLandTopology.NOT_APPLICABLE:
+			return false
+		return water_edges_ending_at_land.is_empty() and _has_complete_water_routing(river_mask | water_mask)
 	if water_mask != 0 and land_mask == 0:
 		# A pure-water tile is valid only when every water port passes through
 		# the central hub; the water then continues to LAND on a neighbour.

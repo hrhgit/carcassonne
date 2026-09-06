@@ -1,0 +1,24 @@
+{
+	"center": "river",
+	"display_name": "程序化：river_straight",
+	"edges": [
+		"EMPTY",
+		"RIVER",
+		"EMPTY",
+		"RIVER"
+	],
+	"id": "river_straight",
+	"land_regions": [],
+	"river_width": 1.08,
+	"seed": 1167493042,
+	"water_routes": [
+		{
+			"from": "EAST",
+			"via_hub": true
+		},
+		{
+			"from": "WEST",
+			"via_hub": true
+		}
+	]
+}

@@ -6,20 +6,57 @@ extends RefCounted
 const EMPTY := 0
 const LAND := 1
 const WATER := 2
+const RIVER := 3
 const NORTH := 0
 const EAST := 1
 const SOUTH := 2
 const WEST := 3
 
 const TILE_HALF_SIZE := 2.45
+const MEADOW_HEIGHT := 0.140
 const SOIL_HEIGHT := 0.152
-const BANK_HEIGHT := 0.150
+const RIVERBED_HEIGHT := 0.150
 const WATER_HEIGHT := 0.175
-const BANK_WIDTH := 0.72
 const WATER_WIDTH := 0.48
+# RIVER stays a water-like, continuous AnimatedSurface but deliberately uses
+# its own, wider fixed port contract. A mixed river tile may additionally
+# expose narrow WATER branches, which use the standard small-water contract.
+const RIVER_WIDTH := 1.08
+# The riverbed is an underwater support layer, not a visible grey shoreline.
+# Keeping it inset from the visible WATER polygon means the foam edge meets
+# MEADOW/LAND directly while the static support mesh remains part of every
+# fixed prefab contract.
+const RIVERBED_EDGE_INSET := 0.040
+const RIVERBED_MIN_WIDTH_RATIO := 0.25
+const RIVERBED_END_INSET := 0.040
+# The top sheet intentionally clears grass.  Its perimeter is therefore
+# closed by opaque water faces that continue beneath the terrain rather than
+# leaving a dark air slit visible from an oblique player camera.
+const WATER_EDGE_SEAL_WORLD_FLOOR := -0.012
+const WATER_EDGE_SEAL_LOCAL_FLOOR := WATER_EDGE_SEAL_WORLD_FLOOR - WATER_HEIGHT
+# A channel endpoint on the fixed tile boundary is a port, not a shore. Its
+# top sheet meets the matching neighbour directly; only actual banks receive
+# foam coordinates and a vertical seal, so a pair of prefabs cannot z-fight.
+const PORT_UV2_NON_SHORE_DISTANCE := 1.0
+const PORT_BOUNDARY_EPSILON := 0.001
 const WATER_SUBDIVISIONS := 3
 # 折线拐角斜接的最大放大倍数（90° 转角实际约为 1.414）。
 const RIBBON_MITER_LIMIT := 3.0
+# 每条水道先保留边中心附近的直线锁定段，再只在地块内部形成少量可读折线。
+# 这样同类端口仍能严丝合缝，水路也不会退化成机械的中心直带。
+const CHANNEL_PORT_LOCK_LENGTH := 0.70
+const CHANNEL_HUB_LOCK_LENGTH := 0.42
+const WATER_MEANDER_MIN_SEGMENT_LENGTH := 1.18
+const RIVER_MEANDER_MIN_SEGMENT_LENGTH := 1.32
+const WATER_MEANDER_MAX_OFFSET := 0.105
+const RIVER_MEANDER_MAX_OFFSET := 0.245
+# Independent channel legs can approach a common hub with different tangents.
+# This small shared polygon prevents their ribbons from leaving a meadow wedge
+# while remaining far inside every fixed edge lock.
+# Keep the hub strictly inside the fixed half-width of its widest port; it
+# fills a tangent mismatch without accidentally presenting a wider RIVER state.
+const CENTRAL_HUB_RADIUS_RATIO := 0.47
+const CENTRAL_HUB_SEGMENTS := 8
 # 开着 Godot 编辑器批量生成时，后台重导入会在 Windows 上短暂锁住刚写入的
 # .tres/.tscn，失败点会在不同文件间随机漂移。保存统一走带重试的包装。
 const SAVE_RETRY_COUNT := 8
@@ -31,8 +68,8 @@ const SAVE_RETRY_DELAY_MS := 150
 const CENTER_NONE := 0
 const CENTER_LAKE := 1
 const CENTER_HUB := 2
+const CENTER_RIVER := 3
 const LAKE_RADIUS := 1.25
-const LAKE_BANK_WIDTH := 0.34
 const LAKE_SEGMENTS := 48
 
 const TILE_ARTWORK_SCRIPT := preload("res://scripts/tile_artwork_3d.gd")
@@ -41,11 +78,11 @@ const PLANTING_MASK_SCRIPT := preload("res://scripts/planting_mask_3d.gd")
 const BASE_MATERIAL := preload("res://art/materials/terrain/tile_base.tres")
 const MEADOW_MATERIAL := preload("res://art/materials/terrain/meadow.tres")
 const SOIL_MATERIAL := preload("res://art/materials/terrain/fertile_soil.tres")
-const BANK_MATERIAL := preload("res://art/materials/terrain/river_bank.tres")
+const RIVERBED_MATERIAL := preload("res://art/materials/terrain/river_bank.tres")
 const WATER_MATERIAL_TEMPLATE := preload("res://art/materials/water/north_east_land_south_water.tres")
 
 const EDGE_NAMES := {"NORTH": NORTH, "EAST": EAST, "SOUTH": SOUTH, "WEST": WEST}
-const EDGE_KINDS := {"EMPTY": EMPTY, "LAND": LAND, "WATER": WATER}
+const EDGE_KINDS := {"EMPTY": EMPTY, "LAND": LAND, "WATER": WATER, "RIVER": RIVER}
 
 
 static func build_from_spec_file(spec_path: String) -> Dictionary:
@@ -93,37 +130,34 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 				return _failure("Could not save LAND planting mask: %s" % error_string(mask_save_error))
 			planting_mask_paths.append(mask_path)
 
-	var water_paths := _water_paths(spec["regions"], spec["routes"])
-	var bank_outlines: Array
-	var water_outlines: Array
-	if int(spec["center"]) == CENTER_LAKE:
-		# A still central pond: the bank is a full disk under a slightly smaller
-		# water disk, so the visible bank is the ring between the two radii.
-		bank_outlines = [_circle_outline(LAKE_RADIUS + LAKE_BANK_WIDTH, LAKE_SEGMENTS)]
-		water_outlines = [_circle_outline(LAKE_RADIUS, LAKE_SEGMENTS)]
-	else:
-		bank_outlines = _merged_ribbon_outlines(water_paths, BANK_WIDTH)
-		water_outlines = _merged_ribbon_outlines(water_paths, WATER_WIDTH)
-	var bank_mesh: ArrayMesh
+	# Geometry variation belongs to the build artifact, never to a placed tile at
+	# runtime. The fixed spec seed makes a card's path reproducible across every
+	# rebuild and its 90-degree rotations.
+	var water_paths := _water_paths(spec["regions"], spec["routes"], int(spec["seed"]))
+	var central_hub_width: float = _central_hub_width(spec["routes"])
+	var water_layers := _build_water_layers(water_paths, int(spec["center"]), central_hub_width)
+	var riverbed_outlines: Array = water_layers["riverbed_outlines"]
+	var water_outlines: Array = water_layers["surface_outlines"]
+	var riverbed_mesh: ArrayMesh
 	var water_mesh: ArrayMesh
 	var shoreline_length := 0.0
-	var bank_path := ""
+	var riverbed_path := ""
 	var water_path := ""
 	var water_material_path := ""
 	if not water_outlines.is_empty():
-		bank_mesh = _build_water_mesh(bank_outlines, BANK_WIDTH)
-		var water_result := _build_water_mesh_with_length(water_outlines, WATER_WIDTH)
+		riverbed_mesh = _build_water_mesh(riverbed_outlines)
+		var water_result := _build_water_mesh_with_length(water_outlines)
 		water_mesh = water_result["mesh"]
 		shoreline_length = float(water_result["shoreline_length"])
-		if bank_mesh.get_surface_count() == 0 or water_mesh.get_surface_count() == 0 or shoreline_length <= 0.0:
+		if riverbed_mesh.get_surface_count() == 0 or water_mesh.get_surface_count() == 0 or shoreline_length <= 0.0:
 			return _failure("Water routes produced an empty river or shoreline field.")
-		bank_path = paths["bank_mesh"]
+		riverbed_path = paths["bank_mesh"]
 		water_path = paths["water_mesh"]
-		var bank_save_error := _save_resource(bank_mesh, bank_path)
+		var riverbed_save_error := _save_resource(riverbed_mesh, riverbed_path)
 		var water_save_error := _save_resource(water_mesh, water_path)
-		if bank_save_error != OK or water_save_error != OK:
-			return _failure("Could not save generated river meshes (bank=%s, water=%s)." % [
-				error_string(bank_save_error), error_string(water_save_error),
+		if riverbed_save_error != OK or water_save_error != OK:
+			return _failure("Could not save generated river meshes (riverbed=%s, water=%s)." % [
+				error_string(riverbed_save_error), error_string(water_save_error),
 			])
 		var water_material := WATER_MATERIAL_TEMPLATE.duplicate(true) as ShaderMaterial
 		water_material.set_shader_parameter("foam_shoreline_length", shoreline_length)
@@ -131,6 +165,10 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 		water_material.set_shader_parameter("foam_network_shoreline_length", 0.0)
 		water_material.set_shader_parameter("foam_network_phase_offset", 0.0)
 		water_material.set_shader_parameter("foam_network_speed_scale", 1.0)
+		# A pure RIVER is a broad, quiet water ribbon.  Keep its white shoreline
+		# foam, but remove the deep/middle/shallow blue bands from the centre.
+		if int(spec["center"]) == CENTER_RIVER:
+			water_material.set_shader_parameter("facet_bands_enabled", false)
 		water_material_path = paths["water_material"]
 		var material_save_error := _save_resource(water_material, water_material_path)
 		if material_save_error != OK:
@@ -145,7 +183,7 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 	if saved_topology == null:
 		return _failure("Generated topology could not be loaded after saving.")
 
-	var root := _build_scene(spec, saved_topology, land_mesh_paths, bank_path, water_path, water_material_path, planting_mask_paths)
+	var root := _build_scene(spec, saved_topology, land_mesh_paths, riverbed_path, water_path, water_material_path, planting_mask_paths)
 	var packed := PackedScene.new()
 	var pack_error := packed.pack(root)
 	if pack_error != OK:
@@ -178,15 +216,33 @@ static func validate_spec(raw_spec: Dictionary) -> Dictionary:
 	if raw_edges.size() != 4:
 		return _failure("edges must contain four values in NORTH/EAST/SOUTH/WEST order.")
 	var edges := PackedInt32Array()
+	var has_river := false
 	for raw_edge in raw_edges:
 		var edge_kind := _edge_kind(raw_edge)
 		if edge_kind < EMPTY:
-			return _failure("edges accepts only EMPTY, LAND, or WATER.")
+			return _failure("edges accepts only EMPTY, LAND, WATER, or RIVER.")
 		edges.append(edge_kind)
+		has_river = has_river or edge_kind == RIVER
 
 	var id := String(raw_spec.get("id", "")).strip_edges()
 	if id.is_empty() or not id.is_valid_identifier():
 		return _failure("id must be a non-empty identifier using letters, digits, and underscores.")
+	var center_kind := _center_kind(raw_spec.get("center", ""))
+	if center_kind < CENTER_NONE:
+		return _failure("center must be none, lake, hub, or river.")
+	var river_width := float(raw_spec.get("river_width", RIVER_WIDTH))
+	if river_width < WATER_WIDTH * 1.75 or river_width > TILE_HALF_SIZE * 0.70:
+		return _failure("river_width must keep the RIVER port visibly wider than WATER and inside the tile boundary contract.")
+	var is_river_tile := has_river
+	if is_river_tile:
+		if not has_river or center_kind != CENTER_RIVER:
+			return _failure("A river tile needs CENTER_RIVER and at least one RIVER edge.")
+		for edge in edges:
+			if edge != EMPTY and edge != RIVER and edge != WATER:
+				return _failure("A river tile cannot contain LAND edges.")
+	elif center_kind == CENTER_RIVER:
+		return _failure("CENTER_RIVER is reserved for a RIVER tile.")
+
 	var raw_regions: Array = raw_spec.get("land_regions", [])
 	var regions: Array = []
 	var region_index_by_id := {}
@@ -215,44 +271,56 @@ static func validate_spec(raw_spec: Dictionary) -> Dictionary:
 			return _failure("Every LAND edge must be assigned to a land region.")
 	if claimed_land.is_empty() and not raw_regions.is_empty():
 		return _failure("A no-land tile cannot define land_regions.")
-
-	var center_kind := _center_kind(raw_spec.get("center", ""))
-	if center_kind < CENTER_NONE:
-		return _failure("center must be none, lake, or hub.")
+	if is_river_tile and not regions.is_empty():
+		return _failure("A river tile must not define LAND regions or planting masks.")
 
 	var raw_routes: Array = raw_spec.get("water_routes", [])
 	var routes: Array = []
-	var routed_water := {}
+	var routed_channels := {}
 	for raw_route in raw_routes:
 		if not raw_route is Dictionary:
-			return _failure("Each water_routes entry must contain from and, for non-hub routes, to_region.")
+			return _failure("Each water_routes entry must contain a channel edge and an allowed target.")
 		var route: Dictionary = raw_route
 		var from_edge := _edge_index(route.get("from", ""))
 		var via_hub := bool(route.get("via_hub", false))
-		if from_edge < NORTH or edges[from_edge] != WATER or routed_water.has(from_edge):
-			return _failure("Each WATER edge needs exactly one valid water route.")
+		if from_edge < NORTH or routed_channels.has(from_edge):
+			return _failure("Each visible channel edge needs exactly one route.")
+		var source_kind := edges[from_edge]
+		if source_kind != WATER and source_kind != RIVER:
+			return _failure("A route may only start at WATER or RIVER.")
 		var target_id := String(route.get("to_region", ""))
-		if via_hub and target_id == "" and regions.is_empty():
-			# Pure-water hub route: the channel reaches the central hub and
-			# continues to LAND on a neighbouring tile.
-			routed_water[from_edge] = true
-			routes.append({"from": from_edge, "to_region": -1, "via_hub": true})
+		var route_width := RIVER_WIDTH if source_kind == RIVER else WATER_WIDTH
+		if is_river_tile:
+			if (source_kind != RIVER and source_kind != WATER) or not via_hub or not target_id.is_empty():
+				return _failure("RIVER and WATER routes must run from their fixed port to the central river hub.")
+			routed_channels[from_edge] = true
+			routes.append({"from": from_edge, "to_region": -1, "via_hub": true, "width": river_width if source_kind == RIVER else WATER_WIDTH})
+			continue
+		if source_kind != WATER:
+			return _failure("Only a CENTER_RIVER tile may use RIVER routes.")
+		if via_hub and target_id.is_empty() and regions.is_empty():
+			# Pure-water and lake-outlet routes reach the central hub.  They
+			# continue to LAND on a neighbour or merge into the central lake.
+			if center_kind != CENTER_HUB and center_kind != CENTER_LAKE:
+				return _failure("A no-LAND WATER route needs a central hub or lake.")
+			routed_channels[from_edge] = true
+			routes.append({"from": from_edge, "to_region": -1, "via_hub": true, "width": route_width})
 			continue
 		if not region_index_by_id.has(target_id):
 			return _failure("Every water route must target an existing LAND region.")
-		routed_water[from_edge] = true
+		routed_channels[from_edge] = true
 		routes.append({
 			"from": from_edge,
 			"to_region": int(region_index_by_id[target_id]),
 			"via_hub": via_hub,
+			"width": route_width,
 		})
 	for edge in range(4):
-		if edges[edge] == WATER and not routed_water.has(edge):
-			return _failure("Every WATER edge must reach at least one LAND region or the central hub.")
-	if not routed_water.is_empty() and regions.is_empty() and center_kind != CENTER_HUB:
-		return _failure("Water cannot exist without a target LAND region or a central hub.")
-	if center_kind == CENTER_LAKE and (not routed_water.is_empty() or not regions.is_empty()):
-		return _failure("A lake tile cannot define LAND regions or WATER edges.")
+		var kind := edges[edge]
+		if (kind == WATER or kind == RIVER) and not routed_channels.has(edge):
+			return _failure("Every visible channel port must reach a LAND region, lake, or central hub.")
+	if not is_river_tile and not routed_channels.is_empty() and regions.is_empty() and center_kind != CENTER_HUB and center_kind != CENTER_LAKE:
+		return _failure("Water cannot exist without a target LAND region, lake, or central hub.")
 	return {
 		"ok": true,
 		"spec": {
@@ -263,6 +331,7 @@ static func validate_spec(raw_spec: Dictionary) -> Dictionary:
 			"edges": edges,
 			"regions": regions,
 			"routes": routes,
+			"river_width": river_width,
 		},
 	}
 
@@ -306,7 +375,7 @@ static func _build_scene(
 	spec: Dictionary,
 	topology: Resource,
 	land_mesh_paths: Array[String],
-	bank_path: String,
+	riverbed_path: String,
 	water_path: String,
 	water_material_path: String,
 	planting_mask_paths: Array[String],
@@ -339,7 +408,7 @@ static func _build_scene(
 	meadow_mesh.material = MEADOW_MATERIAL
 	var meadow := MeshInstance3D.new()
 	meadow.name = "Meadow"
-	meadow.position = Vector3(0.0, 0.14, 0.0)
+	meadow.position = Vector3(0.0, MEADOW_HEIGHT, 0.0)
 	meadow.mesh = meadow_mesh
 	_add(root, meadow, root)
 
@@ -357,7 +426,7 @@ static func _build_scene(
 	var water_root := Node3D.new()
 	water_root.name = "Water"
 	_add(root, water_root, root)
-	if bank_path.is_empty():
+	if riverbed_path.is_empty():
 		var empty_bank := Node3D.new()
 		empty_bank.name = "RiverBed"
 		_add(water_root, empty_bank, root)
@@ -365,12 +434,12 @@ static func _build_scene(
 		empty_surface.name = "AnimatedSurface"
 		_add(water_root, empty_surface, root)
 	else:
-		var bank := MeshInstance3D.new()
-		bank.name = "RiverBed"
-		bank.position.y = BANK_HEIGHT
-		bank.mesh = load(bank_path) as ArrayMesh
-		bank.material_override = BANK_MATERIAL
-		_add(water_root, bank, root)
+		var riverbed := MeshInstance3D.new()
+		riverbed.name = "RiverBed"
+		riverbed.position.y = RIVERBED_HEIGHT
+		riverbed.mesh = load(riverbed_path) as ArrayMesh
+		riverbed.material_override = RIVERBED_MATERIAL
+		_add(water_root, riverbed, root)
 		var surface := MeshInstance3D.new()
 		surface.name = "AnimatedSurface"
 		surface.position.y = WATER_HEIGHT
@@ -404,7 +473,68 @@ static func _build_land_mesh(polygons: Array) -> ArrayMesh:
 	return tool.commit()
 
 
-static func _build_water_mesh_with_length(outlines: Array, width: float) -> Dictionary:
+static func _build_water_layers(water_paths: Array, center_kind: int, central_hub_width := 0.0) -> Dictionary:
+	# Every generated tile gets the same two-layer water contract: a fully
+	# submerged RiverBed support and the visible AnimatedSurface. The support is
+	# inset rather than expanded, so it cannot become a separate grey bank in
+	# top-down play or at a 90-degree seam.
+	var surface_parts: Array = []
+	var riverbed_parts: Array = []
+	if center_kind == CENTER_LAKE:
+		surface_parts.append(_circle_outline(LAKE_RADIUS, LAKE_SEGMENTS))
+		riverbed_parts.append(_circle_outline(LAKE_RADIUS - RIVERBED_EDGE_INSET, LAKE_SEGMENTS))
+	elif central_hub_width > 0.0:
+		var hub_radius := central_hub_width * CENTRAL_HUB_RADIUS_RATIO
+		surface_parts.append(_circle_outline(hub_radius, CENTRAL_HUB_SEGMENTS))
+		riverbed_parts.append(_circle_outline(maxf(hub_radius - RIVERBED_EDGE_INSET, hub_radius * RIVERBED_MIN_WIDTH_RATIO), CENTRAL_HUB_SEGMENTS))
+	surface_parts.append_array(_merged_ribbon_outlines(water_paths))
+	riverbed_parts.append_array(_merged_ribbon_outlines(_inset_water_path_ends(water_paths, RIVERBED_END_INSET)))
+	return {
+		"riverbed_outlines": _merge_polygons(riverbed_parts),
+		"surface_outlines": _merge_polygons(surface_parts),
+	}
+
+
+static func _central_hub_width(routes: Array) -> float:
+	var route_count := 0
+	var maximum_width := 0.0
+	for route in routes:
+		if not bool(route.get("via_hub", false)):
+			continue
+		route_count += 1
+		maximum_width = maxf(maximum_width, float(route.get("width", WATER_WIDTH)))
+	# A one-port route already has one continuous ribbon through its hub. The
+	# shared patch is only needed when multiple independently bent ribbons meet.
+	return maximum_width if route_count >= 2 else 0.0
+
+
+static func _inset_water_path_ends(paths: Array, inset: float) -> Array:
+	var result: Array = []
+	for source_path in paths:
+		var source_points := PackedVector2Array()
+		var source_width := WATER_WIDTH
+		if source_path is Dictionary:
+			source_points = (source_path as Dictionary).get("points", PackedVector2Array())
+			source_width = float((source_path as Dictionary).get("width", WATER_WIDTH))
+		else:
+			source_points = source_path
+		var path: PackedVector2Array = source_points.duplicate()
+		if path.size() >= 2:
+			var start_segment := path[1] - path[0]
+			if start_segment.length() > 0.00001:
+				path[0] = path[0].move_toward(path[1], minf(inset, start_segment.length() * 0.45))
+			var end_segment := path[path.size() - 2] - path[path.size() - 1]
+			if end_segment.length() > 0.00001:
+				path[path.size() - 1] = path[path.size() - 1].move_toward(path[path.size() - 2], minf(inset, end_segment.length() * 0.45))
+		result.append({"points": path, "width": _riverbed_width(source_width)})
+	return result
+
+
+static func _riverbed_width(surface_width: float) -> float:
+	return maxf(surface_width - RIVERBED_EDGE_INSET * 2.0, surface_width * RIVERBED_MIN_WIDTH_RATIO)
+
+
+static func _build_water_mesh_with_length(outlines: Array, include_edge_seal := true) -> Dictionary:
 	var shoreline_length := _total_outline_length(outlines)
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -414,25 +544,94 @@ static func _build_water_mesh_with_length(outlines: Array, width: float) -> Dict
 			_append_subdivided_triangle(
 				tool,
 				outline[indices[index]], outline[indices[index + 1]], outline[indices[index + 2]],
-				outlines, shoreline_length, width, WATER_SUBDIVISIONS,
+				outlines, shoreline_length, WATER_SUBDIVISIONS,
 			)
+	if include_edge_seal:
+		_append_water_edge_seals(tool, outlines, shoreline_length)
 	return {"mesh": tool.commit(), "shoreline_length": shoreline_length}
 
 
-static func _build_water_mesh(outlines: Array, width: float) -> ArrayMesh:
-	return _build_water_mesh_with_length(outlines, width)["mesh"]
+static func _build_water_mesh(outlines: Array) -> ArrayMesh:
+	# RiverBed is a top-only underwater support.  Only AnimatedSurface receives
+	# the opaque perimeter seal that bridges its intentional clearance above
+	# meadow and soil.
+	return _build_water_mesh_with_length(outlines, false)["mesh"]
 
 
-static func _append_subdivided_triangle(tool: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, outlines: Array, shoreline_length: float, width: float, subdivisions: int) -> void:
+static func _append_water_edge_seals(tool: SurfaceTool, outlines: Array, shoreline_length: float) -> void:
+	var accumulated_length := 0.0
+	var safe_length := maxf(shoreline_length, 0.0001)
+	for source_outline in outlines:
+		var outline: PackedVector2Array = source_outline
+		if outline.size() < 3:
+			continue
+		var orientation := _outline_signed_area(outline)
+		for index in range(outline.size()):
+			var start: Vector2 = outline[index]
+			var end: Vector2 = outline[(index + 1) % outline.size()]
+			var edge := end - start
+			var edge_length := edge.length()
+			if edge_length <= 0.00001:
+				continue
+			var is_port := _is_port_boundary_segment(start, end)
+			# A matching neighbour supplies the continuous top sheet at a port.
+			# Do not place two coincident vertical walls at that locked seam: they
+			# would z-fight into a dark line even though the water planes meet.
+			if is_port:
+				continue
+			var outward := Vector2(edge.y, -edge.x).normalized()
+			if orientation < 0.0:
+				outward = -outward
+			var side_normal := Vector3(outward.x, 0.0, outward.y)
+			var start_shore := Vector2(0.0, accumulated_length / safe_length)
+			var end_shore := Vector2(0.0, (accumulated_length + edge_length) / safe_length)
+			_append_water_edge_seal_quad(tool, start, end, side_normal, start_shore, end_shore)
+			accumulated_length += edge_length
+
+
+static func _outline_signed_area(outline: PackedVector2Array) -> float:
+	var twice_area := 0.0
+	for index in range(outline.size()):
+		var start: Vector2 = outline[index]
+		var end: Vector2 = outline[(index + 1) % outline.size()]
+		twice_area += start.x * end.y - end.x * start.y
+	return twice_area * 0.5
+
+
+static func _append_water_edge_seal_quad(
+	tool: SurfaceTool,
+	start: Vector2,
+	end: Vector2,
+	side_normal: Vector3,
+	start_shore: Vector2,
+	end_shore: Vector2,
+) -> void:
+	var start_uv := Vector2((start.x + TILE_HALF_SIZE) / (TILE_HALF_SIZE * 2.0), (start.y + TILE_HALF_SIZE) / (TILE_HALF_SIZE * 2.0))
+	var end_uv := Vector2((end.x + TILE_HALF_SIZE) / (TILE_HALF_SIZE * 2.0), (end.y + TILE_HALF_SIZE) / (TILE_HALF_SIZE * 2.0))
+	for vertex_data in [
+		[Vector3(start.x, 0.0, start.y), start_uv, start_shore],
+		[Vector3(start.x, WATER_EDGE_SEAL_LOCAL_FLOOR, start.y), start_uv, start_shore],
+		[Vector3(end.x, WATER_EDGE_SEAL_LOCAL_FLOOR, end.y), end_uv, end_shore],
+		[Vector3(start.x, 0.0, start.y), start_uv, start_shore],
+		[Vector3(end.x, WATER_EDGE_SEAL_LOCAL_FLOOR, end.y), end_uv, end_shore],
+		[Vector3(end.x, 0.0, end.y), end_uv, end_shore],
+	]:
+		tool.set_normal(side_normal)
+		tool.set_uv(vertex_data[1] as Vector2)
+		tool.set_uv2(vertex_data[2] as Vector2)
+		tool.add_vertex(vertex_data[0] as Vector3)
+
+
+static func _append_subdivided_triangle(tool: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, outlines: Array, shoreline_length: float, subdivisions: int) -> void:
 	if subdivisions > 0:
 		var ab := (a + b) * 0.5
 		var bc := (b + c) * 0.5
 		var ca := (c + a) * 0.5
 		var next := subdivisions - 1
-		_append_subdivided_triangle(tool, a, ab, ca, outlines, shoreline_length, width, next)
-		_append_subdivided_triangle(tool, ab, b, bc, outlines, shoreline_length, width, next)
-		_append_subdivided_triangle(tool, ca, bc, c, outlines, shoreline_length, width, next)
-		_append_subdivided_triangle(tool, ab, bc, ca, outlines, shoreline_length, width, next)
+		_append_subdivided_triangle(tool, a, ab, ca, outlines, shoreline_length, next)
+		_append_subdivided_triangle(tool, ab, b, bc, outlines, shoreline_length, next)
+		_append_subdivided_triangle(tool, ca, bc, c, outlines, shoreline_length, next)
+		_append_subdivided_triangle(tool, ab, bc, ca, outlines, shoreline_length, next)
 		return
 	for point in [a, b, c]:
 		tool.set_normal(Vector3.UP)
@@ -451,7 +650,7 @@ static func _shoreline_sample(point: Vector2, outlines: Array, shoreline_length:
 			var end: Vector2 = outline[(index + 1) % outline.size()]
 			var segment := end - start
 			var segment_length := segment.length()
-			if is_zero_approx(segment_length):
+			if is_zero_approx(segment_length) or _is_port_boundary_segment(start, end):
 				continue
 			var closest := Geometry2D.get_closest_point_to_segment(point, start, end)
 			var distance_squared := point.distance_squared_to(closest)
@@ -459,6 +658,8 @@ static func _shoreline_sample(point: Vector2, outlines: Array, shoreline_length:
 				best_distance_squared = distance_squared
 				best_arc_length = accumulated_length + clampf((point - start).dot(segment / segment_length), 0.0, segment_length)
 			accumulated_length += segment_length
+	if best_distance_squared == INF:
+		return Vector2(PORT_UV2_NON_SHORE_DISTANCE, 0.0)
 	return Vector2(sqrt(best_distance_squared), fposmod(best_arc_length / maxf(shoreline_length, 0.001), 1.0))
 
 
@@ -466,8 +667,23 @@ static func _total_outline_length(outlines: Array) -> float:
 	var total := 0.0
 	for outline in outlines:
 		for index in range(outline.size()):
-			total += outline[index].distance_to(outline[(index + 1) % outline.size()])
+			var start: Vector2 = outline[index]
+			var end: Vector2 = outline[(index + 1) % outline.size()]
+			if not _is_port_boundary_segment(start, end):
+				total += start.distance_to(end)
 	return total
+
+
+static func _is_port_boundary_segment(start: Vector2, end: Vector2) -> bool:
+	# All generated channel endpoints are locked to one tile edge.  Excluding
+	# only these collinear boundary segments leaves actual banks (including a
+	# lake rim) in the d/s field while preventing a false shoreline at a seam.
+	return (
+		(absf(start.x - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON and absf(end.x - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON)
+		or (absf(start.x + TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON and absf(end.x + TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON)
+		or (absf(start.y - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON and absf(end.y - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON)
+		or (absf(start.y + TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON and absf(end.y + TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON)
+	)
 
 
 static func _merged_region_polygons(edges: PackedInt32Array) -> Array:
@@ -503,26 +719,126 @@ static func _region_connector(edges: PackedInt32Array) -> PackedVector2Array:
 	])
 
 
-static func _water_paths(regions: Array, routes: Array) -> Array:
+static func _water_paths(regions: Array, routes: Array, tile_seed := 0) -> Array:
 	var result: Array = []
 	var hub_targets := {}
-	for route in routes:
+	for route_index in range(routes.size()):
+		var route: Dictionary = routes[route_index]
 		var from_edge := int(route["from"])
 		var inlet := _edge_direction(from_edge) * TILE_HALF_SIZE
 		var target_index := int(route["to_region"])
+		var width := float(route.get("width", WATER_WIDTH))
 		if route["via_hub"]:
-			result.append(PackedVector2Array([inlet, Vector2.ZERO]))
+			result.append({
+				"points": _meandered_path(PackedVector2Array([inlet, Vector2.ZERO]), width, tile_seed, route_index),
+				"width": width,
+			})
 			if target_index >= 0:
-				hub_targets[target_index] = true
+				hub_targets[target_index] = width
 		else:
 			var contact := _region_contact(regions[target_index]["edges"], from_edge)
 			# 地块构成规范 §4.1：拐弯或分叉的水流必须先到中央汇点、再折向目标，
 			# 不得贴边即转弯。单水口同样适用——水陆分居两条垂直边时（如西水北土），
 			# 直接连成一条斜线会让拓扑无法读出，必须拆成"边中心 → 中央 → 土地"折线。
-			result.append(_polyline_through_center(inlet, contact))
-	for region_index in hub_targets:
-		result.append(PackedVector2Array([Vector2.ZERO, _region_contact(regions[region_index]["edges"], -1)]))
+			result.append({
+				"points": _meandered_path(_polyline_through_center(inlet, contact), width, tile_seed, route_index),
+				"width": width,
+			})
+	var sorted_hub_targets: Array = hub_targets.keys()
+	sorted_hub_targets.sort()
+	for target_index in range(sorted_hub_targets.size()):
+		var region_index := int(sorted_hub_targets[target_index])
+		result.append({
+			"points": _meandered_path(
+				PackedVector2Array([Vector2.ZERO, _region_contact(regions[region_index]["edges"], -1)]),
+				float(hub_targets[region_index]),
+				tile_seed,
+				routes.size() + target_index,
+			),
+			"width": float(hub_targets[region_index]),
+		})
 	return result
+
+
+# The legacy north/east-land/south-water art used a locked south port followed
+# by an authored Bezier. Procedural cards keep the same boundary discipline,
+# but express the bend as two deterministic low-poly interior points: this
+# follows the card grammar without introducing a smooth curve or runtime mesh
+# mutation.
+static func _meandered_path(anchors: PackedVector2Array, width: float, tile_seed: int, channel_index: int) -> PackedVector2Array:
+	if anchors.size() < 2:
+		return anchors
+	var result := PackedVector2Array([anchors[0]])
+	for segment_index in range(anchors.size() - 1):
+		var segment := _meandered_segment(
+			anchors[segment_index], anchors[segment_index + 1], width,
+			tile_seed, channel_index, segment_index,
+		)
+		for point_index in range(1, segment.size()):
+			result.append(segment[point_index])
+	return result
+
+
+static func _meandered_segment(
+	start: Vector2,
+	end: Vector2,
+	width: float,
+	tile_seed: int,
+	channel_index: int,
+	segment_index: int,
+) -> PackedVector2Array:
+	var delta := end - start
+	var length := delta.length()
+	var minimum_length := RIVER_MEANDER_MIN_SEGMENT_LENGTH if width > WATER_WIDTH * 1.5 else WATER_MEANDER_MIN_SEGMENT_LENGTH
+	if length < minimum_length:
+		return PackedVector2Array([start, end])
+	var direction := delta / length
+	var start_lock := _channel_lock_length(start)
+	var end_lock := _channel_lock_length(end)
+	var free_length := length - start_lock - end_lock
+	if free_length < 0.48:
+		return PackedVector2Array([start, end])
+
+	var maximum_offset := RIVER_MEANDER_MAX_OFFSET if width > WATER_WIDTH * 1.5 else WATER_MEANDER_MAX_OFFSET
+	maximum_offset = minf(maximum_offset, minf(width * 0.28, free_length * 0.18))
+	if maximum_offset < 0.025:
+		return PackedVector2Array([start, end])
+	var rng := RandomNumberGenerator.new()
+	# The salts make each port/segment distinct while keeping an unchanged spec
+	# byte-for-byte reproducible after a rebuild.
+	rng.seed = int(tile_seed) + channel_index * 1_000_003 + segment_index * 97_409
+	var side := -1.0 if rng.randf() < 0.5 else 1.0
+	var offset := maximum_offset * rng.randf_range(0.64, 0.92)
+	var normal := Vector2(-direction.y, direction.x) * side
+	var first_progress := start_lock + free_length * rng.randf_range(0.32, 0.43)
+	var second_progress := start_lock + free_length * rng.randf_range(0.62, 0.73)
+	var points := PackedVector2Array([start])
+	if start_lock > 0.001:
+		points.append(start + direction * start_lock)
+	# Keeping both points on the same side creates a shallow natural C-bend;
+	# the return to the fixed next anchor remains a visible low-poly segment.
+	points.append(start + direction * first_progress + normal * offset)
+	points.append(start + direction * second_progress + normal * offset * rng.randf_range(0.78, 0.96))
+	if end_lock > 0.001:
+		points.append(end - direction * end_lock)
+	points.append(end)
+	return points
+
+
+static func _is_tile_boundary_point(point: Vector2) -> bool:
+	return absf(absf(point.x) - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON \
+		or absf(absf(point.y) - TILE_HALF_SIZE) <= PORT_BOUNDARY_EPSILON
+
+
+static func _channel_lock_length(point: Vector2) -> float:
+	if _is_tile_boundary_point(point):
+		return CHANNEL_PORT_LOCK_LENGTH
+	# Separate routes meet at the same central hub. Giving every final leg the
+	# same radial tangent prevents a concave grass slit where two independently
+	# bent ribbons otherwise meet.
+	if point.length_squared() <= PORT_BOUNDARY_EPSILON * PORT_BOUNDARY_EPSILON:
+		return CHANNEL_HUB_LOCK_LENGTH
+	return 0.0
 
 
 # 把"边中心 → 土地接触点"的直线升级为"边中心 → 中央汇点 → 土地接触点"的折线。
@@ -594,10 +910,19 @@ static func _region_contact(edges: PackedInt32Array, from_edge: int) -> Vector2:
 	return Vector2.ZERO
 
 
-static func _merged_ribbon_outlines(paths: Array, width: float) -> Array:
+static func _merged_ribbon_outlines(paths: Array) -> Array:
 	var outlines: Array = []
-	for path in paths:
-		outlines.append(_ribbon_outline(path, width))
+	for source_path in paths:
+		var path := PackedVector2Array()
+		var width := WATER_WIDTH
+		if source_path is Dictionary:
+			path = (source_path as Dictionary).get("points", PackedVector2Array())
+			width = float((source_path as Dictionary).get("width", WATER_WIDTH))
+		else:
+			path = source_path
+		var outline := _ribbon_outline(path, width)
+		if not outline.is_empty():
+			outlines.append(outline)
 	return _merge_polygons(outlines)
 
 
@@ -700,14 +1025,14 @@ static func _rotate_points(points: PackedVector2Array, quarter_turns: int) -> Pa
 
 
 static func _edge_kind(value: Variant) -> int:
-	if value is int and value >= EMPTY and value <= WATER:
+	if value is int and value >= EMPTY and value <= RIVER:
 		return value
 	return int(EDGE_KINDS.get(String(value).to_upper(), -1))
 
 
 static func _center_kind(value: Variant) -> int:
 	if value is int:
-		return value if value >= CENTER_NONE and value <= CENTER_HUB else -1
+		return value if value >= CENTER_NONE and value <= CENTER_RIVER else -1
 	match String(value).strip_edges().to_lower():
 		"", "none":
 			return CENTER_NONE
@@ -715,6 +1040,8 @@ static func _center_kind(value: Variant) -> int:
 			return CENTER_LAKE
 		"hub":
 			return CENTER_HUB
+		"river":
+			return CENTER_RIVER
 	return -1
 
 
