@@ -1,9 +1,9 @@
 class_name PlantScatterPlacement3D
 extends Resource
 
-# Saved output of the editor-time scatter pass. Keeping the seed result as
-# data makes every final GrowingPlants/WitheredPlants layer inspectable and
-# prevents visual layout from changing during gameplay.
+# One deterministic scatter record. It can be persisted for an audit study or
+# held in a RuntimePlants layer; in both cases the stable seed prevents layout
+# changes during gameplay state refreshes.
 @export var profile: PlantScatterProfile3D
 @export var local_position := Vector3.ZERO
 @export var yaw_degrees := 0.0

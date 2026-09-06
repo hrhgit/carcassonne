@@ -14,6 +14,7 @@ static func generate(
 	planting_mask: PlantingMask3D,
 	profiles: Array[PlantScatterProfile3D],
 	seed: int,
+	report_exhausted := true,
 ) -> PlantScatterLayout3D:
 	var layout := PlantScatterLayout3D.new()
 	layout.id = layout_id
@@ -31,7 +32,8 @@ static func generate(
 		for profile_index in range(profile.desired_count):
 			var point := _choose_point(planting_mask, profile, layout.placements, rng)
 			if point == Vector2.INF:
-				push_warning("Plant scatter could not place %s instance %d inside mask %s." % [profile.id, profile_index + 1, planting_mask.id])
+				if report_exhausted:
+					push_warning("Plant scatter could not place %s instance %d inside mask %s." % [profile.id, profile_index + 1, planting_mask.id])
 				continue
 			var placement := PlantScatterPlacement3D.new()
 			placement.profile = profile

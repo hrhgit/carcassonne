@@ -2,6 +2,7 @@ extends SceneTree
 
 const GENERATED_SCENE := preload("res://scenes/tiles_3d/generated/procedural_north_east_land_south_water.tscn")
 const GENERATOR := preload("res://scripts/tile_prefab_generator_3d.gd")
+const RUNTIME_SCATTER := preload("res://scripts/runtime_plant_scatter_3d.gd")
 const EXPECTED_EDGES := [1, 1, 2, 0]
 const EXPECTED_TOPOLOGY := "res://art/topologies/generated/procedural_north_east_land_south_water.tres"
 
@@ -27,7 +28,7 @@ func _smoke() -> void:
 		_fail("TileSpec3D validation did not reject an orphan water edge.")
 		return
 
-	var tile := GENERATED_SCENE.instantiate() as Node3D
+	var tile := GENERATED_SCENE.instantiate() as TileArtwork3D
 	if tile == null:
 		_fail("Generated 3D scene did not instantiate.")
 		return
@@ -93,36 +94,89 @@ func _smoke() -> void:
 
 	var growing_layer := tile.get_node_or_null(^"GrowingPlants") as Node3D
 	var withered_layer := tile.get_node_or_null(^"WitheredPlants") as Node3D
-	var growing_plants := growing_layer.find_children("*", "SowablePlant3D", true, false)
-	var withered_plants := withered_layer.find_children("*", "SowablePlant3D", true, false)
-	if growing_plants.size() != 5 or withered_plants.size() != 5:
+	var masks: Array[PlantingMask3D] = tile.get("planting_masks")
+	if masks.is_empty() or not growing_layer.get_children().is_empty() or not withered_layer.get_children().is_empty():
 		tile.queue_free()
-		_fail("Generated tile did not bake matching growing and withered plant layers.")
+		_fail("Generated tile must carry baked LAND masks but no baked plant instances.")
 		return
-	for plant in growing_plants:
-		var planted_position := plant.position as Vector3
-		if not _is_covered(land_vertices, Vector2(planted_position.x, planted_position.z)):
-			tile.queue_free()
-			_fail("A generated plant was placed on meadow instead of LAND.")
-			return
-	growing_plants[0].call("set_owner_color", Color("#e75f93"))
-	tile.call("set_growth_state", 0)
-	if growing_layer.visible or withered_layer.visible:
+	var layout_seed := RUNTIME_SCATTER.seed_for_tile(4493, Vector2i(3, -2))
+	var placements := RUNTIME_SCATTER.generate_for_tile(tile, layout_seed)
+	var repeated_placements := RUNTIME_SCATTER.generate_for_tile(tile, layout_seed)
+	if placements.is_empty() or placements.size() != repeated_placements.size():
 		tile.queue_free()
-		_fail("Generated tile cannot display bare soil independently from plants.")
+		_fail("Runtime scatter did not yield a stable LAND-only layout.")
+		return
+	for placement_index in range(placements.size()):
+		var placement := placements[placement_index]
+		var repeated := repeated_placements[placement_index]
+		if placement.local_position.distance_to(repeated.local_position) > 0.00001 or not is_equal_approx(placement.scale_multiplier, repeated.scale_multiplier):
+			tile.queue_free()
+			_fail("Runtime scatter changed a stable seed layout.")
+			return
+		var planted_position := placement.local_position
+		var inside_mask := false
+		for mask in masks:
+			inside_mask = inside_mask or mask.contains_point(Vector2(planted_position.x, planted_position.z), placement.profile.extra_edge_clearance + placement.profile.footprint_radius)
+		if not inside_mask or not _is_covered(land_vertices, Vector2(planted_position.x, planted_position.z)):
+			tile.queue_free()
+			_fail("A runtime plant was placed outside the baked LAND mask.")
+			return
+	tile.set_runtime_plant_layout(placements)
+	var runtime_plants: Array[SowablePlant3D] = tile.get_runtime_plants()
+	if runtime_plants.size() != placements.size():
+		tile.queue_free()
+		_fail("Runtime plant instances do not match the generated placement count.")
+		return
+	var counts := {&"soil_herb": 0, &"soil_flower": 0, &"soil_sapling": 0}
+	for plant in runtime_plants:
+		counts[plant.species_id] = int(counts.get(plant.species_id, 0)) + 1
+		if not plant.is_authored_model_valid():
+			tile.queue_free()
+			_fail("A runtime plant lost its selected Kenney model or ownership component.")
+			return
+	if int(counts[&"soil_herb"]) <= int(counts[&"soil_flower"]) or int(counts[&"soil_flower"]) <= int(counts[&"soil_sapling"]):
+		tile.queue_free()
+		_fail("Default runtime density must remain grass > flower > tree.")
+		return
+	tile.call("set_growth_state", 0)
+	if growing_layer.visible or withered_layer.visible or runtime_plants.any(func(plant): return plant.visible):
+		tile.queue_free()
+		_fail("Generated tile cannot display bare soil independently from runtime plants.")
 		return
 	tile.call("set_growth_state", 1)
-	if not growing_layer.visible or withered_layer.visible:
+	if runtime_plants.any(func(plant): return not plant.visible):
 		tile.queue_free()
-		_fail("Generated tile did not reveal its fixed growing layer.")
+		_fail("Generated tile did not reveal its runtime growing plants.")
 		return
 	tile.call("set_growth_state", 2)
-	if growing_layer.visible or not withered_layer.visible:
+	if runtime_plants.any(func(plant): return int(plant.growth_state) != SowablePlant3D.GrowthState.WILTED):
 		tile.queue_free()
-		_fail("Generated tile did not reveal its fixed withered layer.")
+		_fail("Generated tile did not select the runtime withered form.")
 		return
+	var owner_color := Color("#e75f93")
+	tile.set_runtime_plant_states({
+		0: {"growth_state": TileArtwork3D.GrowthState.GROWING, "owner_color": owner_color},
+	})
+	tile.call("set_growth_state", 1)
+	for plant in runtime_plants:
+		var should_show := int(plant.get_meta("game_species", -1)) == 0
+		if plant.visible != should_show:
+			tile.queue_free()
+			_fail("Selecting grass did not limit the runtime layer to grass placements.")
+			return
+	tile.set_runtime_plant_states({
+		0: {"growth_state": TileArtwork3D.GrowthState.GROWING, "owner_color": owner_color},
+		1: {"growth_state": TileArtwork3D.GrowthState.GROWING, "owner_color": owner_color},
+		2: {"growth_state": TileArtwork3D.GrowthState.GROWING, "owner_color": owner_color},
+	})
+	tile.call("set_growth_state", 1)
+	for plant in runtime_plants:
+		if not plant.owner_color_is_applied(owner_color):
+			tile.queue_free()
+			_fail("A runtime plant did not recolour its authored flower/leaf/grass component.")
+			return
 	tile.queue_free()
-	print("GENERATED_TILE_3D_PREFAB_PASS: canonical ports, static meshes, baked UV2 shoreline, and land-only plant states are valid.")
+	print("GENERATED_TILE_3D_PREFAB_PASS: canonical ports, static meshes, baked LAND masks, deterministic runtime plants, and land-only states are valid.")
 	quit()
 
 
@@ -137,6 +191,7 @@ func _has_default_water_parameters(material: ShaderMaterial) -> bool:
 		and is_equal_approx(float(material.get_shader_parameter("foam_cutoff")), 0.6)
 		and is_equal_approx(float(material.get_shader_parameter("foam_speed")), 0.025)
 		and float(material.get_shader_parameter("foam_shoreline_length")) > 0.0
+		and is_equal_approx(float(material.get_shader_parameter("foam_network_speed_scale")), 1.0)
 	)
 
 

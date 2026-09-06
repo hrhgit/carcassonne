@@ -21,6 +21,8 @@ artifacts/
 # IDE / agent tool directories
 .codex/
 .workbuddy-ai/
+.workbuddy/
+tmp/
 
 # Third-party source assets (large originals; exported GLBs live in art/models/)
 # Keep originals ignored by default, except the pinned complete Kenney archive.

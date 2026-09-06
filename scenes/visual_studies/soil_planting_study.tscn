@@ -89,6 +89,8 @@ mesh = SubResource("MeshSoilTop")
 
 [node name="SoilPlantingBed" parent="." instance=ExtResource("2_bed")]
 
+[node name="PreviewPlants" type="Node3D" parent="."]
+
 [node name="Camera3D" type="Camera3D" parent="."]
 current = true
 projection = 1
@@ -130,7 +132,7 @@ offset_right = 455.0
 offset_bottom = 114.0
 theme_override_colors/font_color = Color(0.78, 0.86, 0.75, 1)
 theme_override_font_sizes/font_size = 12
-text = "颜色只替换徽记；轮廓、密度与枯萎形态表达植物状态"
+text = "颜色分别替换花瓣、树冠和整丛草；状态仍靠轮廓与枯萎形态辨识"
 
 [node name="StateLabel" type="Label" parent="UI/InfoPanel"]
 offset_left = 23.0
@@ -157,7 +159,7 @@ offset_right = 455.0
 offset_bottom = 177.0
 theme_override_colors/font_color = Color(0.18, 0.52, 0.86, 1)
 theme_override_font_sizes/font_size = 13
-text = "玩家归属徽记：P1"
+text = "玩家归属颜色：P1（花瓣 / 树冠 / 整丛草）"
 
 [node name="Controls" type="Label" parent="UI"]
 offset_left = 32.0
@@ -166,5 +168,5 @@ offset_right = 1248.0
 offset_bottom = 790.0
 theme_override_colors/font_color = Color(0.76, 0.89, 0.77, 0.96)
 theme_override_font_sizes/font_size = 14
-text = "B 裸土    G 生长    W 枯萎    1 / 2 / 3 生长覆盖    C 切换玩家归属徽记"
+text = "B 裸土    G 生长    W 枯萎    1 / 2 / 3 生长覆盖    C 切换玩家颜色    右侧面板：密度 / 整体大小 / 大小差异"
 horizontal_alignment = 1

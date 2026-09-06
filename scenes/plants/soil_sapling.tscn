@@ -1,153 +1,29 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://art/models/plants/kenney/tree_detailed.glb" id="2_model"]
 
-[sub_resource type="StandardMaterial3D" id="MatTrunk"]
-albedo_color = Color(0.30, 0.19, 0.095, 1)
-roughness = 0.95
-
-[sub_resource type="StandardMaterial3D" id="MatCanopy"]
-albedo_color = Color(0.16, 0.40, 0.17, 1)
-roughness = 0.86
-
-[sub_resource type="StandardMaterial3D" id="MatCanopyLight"]
-albedo_color = Color(0.29, 0.56, 0.22, 1)
-roughness = 0.84
-
-[sub_resource type="StandardMaterial3D" id="MatDryTrunk"]
-albedo_color = Color(0.25, 0.17, 0.10, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="MatDryBranch"]
-albedo_color = Color(0.40, 0.29, 0.16, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="MatOwnerMarker"]
+[sub_resource type="StandardMaterial3D" id="MatWithered"]
 resource_local_to_scene = true
-albedo_color = Color(0.18, 0.52, 0.86, 1)
-roughness = 0.62
-
-[sub_resource type="CylinderMesh" id="MeshTrunk"]
-material = SubResource("MatTrunk")
-top_radius = 0.050
-bottom_radius = 0.075
-height = 1.05
-radial_segments = 6
-rings = 1
-
-[sub_resource type="CylinderMesh" id="MeshBranch"]
-material = SubResource("MatTrunk")
-top_radius = 0.024
-bottom_radius = 0.038
-height = 0.56
-radial_segments = 5
-rings = 1
-
-[sub_resource type="SphereMesh" id="MeshCanopy"]
-material = SubResource("MatCanopy")
-radius = 0.30
-height = 0.48
-radial_segments = 7
-rings = 4
-
-[sub_resource type="SphereMesh" id="MeshCanopyLight"]
-material = SubResource("MatCanopyLight")
-radius = 0.22
-height = 0.34
-radial_segments = 6
-rings = 3
-
-[sub_resource type="CylinderMesh" id="MeshDryTrunk"]
-material = SubResource("MatDryTrunk")
-top_radius = 0.040
-bottom_radius = 0.065
-height = 1.00
-radial_segments = 5
-rings = 1
-
-[sub_resource type="CylinderMesh" id="MeshDryBranch"]
-material = SubResource("MatDryBranch")
-top_radius = 0.012
-bottom_radius = 0.027
-height = 0.50
-radial_segments = 5
-rings = 1
-
-[sub_resource type="CylinderMesh" id="MeshOwnerMarker"]
-material = SubResource("MatOwnerMarker")
-top_radius = 0.11
-bottom_radius = 0.11
-height = 0.05
-radial_segments = 6
-rings = 1
+albedo_color = Color(0.29, 0.18, 0.095, 1)
+roughness = 1.0
 
 [node name="SoilSapling" type="Node3D"]
 script = ExtResource("1_script")
 species_id = &"soil_sapling"
+owner_color_mesh_name = &"tree_detailed"
+owner_color_surface_index = 0
+withered_material = SubResource("MatWithered")
 
 [node name="GrowingParts" type="Node3D" parent="."]
 
-[node name="Trunk" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(0, 0.525, 0)
-mesh = SubResource("MeshTrunk")
-
-[node name="BranchWest" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(-0.16, 0.73, 0)
-rotation_degrees = Vector3(0, 0, 57)
-scale = Vector3(0.88, 0.88, 0.88)
-mesh = SubResource("MeshBranch")
-
-[node name="BranchEast" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(0.15, 0.80, 0.02)
-rotation_degrees = Vector3(12, 0, -54)
-scale = Vector3(0.76, 0.80, 0.76)
-mesh = SubResource("MeshBranch")
-
-[node name="CanopyTop" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(0, 1.17, 0)
-mesh = SubResource("MeshCanopy")
-
-[node name="CanopyWest" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(-0.22, 1.03, 0.02)
-scale = Vector3(0.86, 0.86, 0.86)
-mesh = SubResource("MeshCanopy")
-
-[node name="CanopyEast" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(0.22, 1.00, -0.02)
-scale = Vector3(0.80, 0.80, 0.80)
-mesh = SubResource("MeshCanopy")
-
-[node name="CanopyHighlight" type="MeshInstance3D" parent="GrowingParts"]
-position = Vector3(-0.06, 1.31, -0.16)
-scale = Vector3(0.72, 0.72, 0.72)
-mesh = SubResource("MeshCanopyLight")
+[node name="KenneyTreeDetailed" parent="GrowingParts" instance=ExtResource("2_model")]
+scale = Vector3(0.96, 0.96, 0.96)
 
 [node name="WitheredParts" type="Node3D" parent="."]
 visible = false
 
-[node name="DryTrunk" type="MeshInstance3D" parent="WitheredParts"]
-position = Vector3(0.035, 0.50, 0)
-rotation_degrees = Vector3(0, 0, -4)
-mesh = SubResource("MeshDryTrunk")
-
-[node name="DryBranchWest" type="MeshInstance3D" parent="WitheredParts"]
-position = Vector3(-0.16, 0.68, 0)
-rotation_degrees = Vector3(0, 0, 62)
-mesh = SubResource("MeshDryBranch")
-
-[node name="DryBranchEast" type="MeshInstance3D" parent="WitheredParts"]
-position = Vector3(0.16, 0.73, 0.02)
-rotation_degrees = Vector3(14, 0, -57)
-scale = Vector3(0.84, 0.84, 0.84)
-mesh = SubResource("MeshDryBranch")
-
-[node name="DryBranchTop" type="MeshInstance3D" parent="WitheredParts"]
-position = Vector3(0.035, 0.93, 0)
-rotation_degrees = Vector3(0, 0, 17)
-scale = Vector3(0.68, 0.62, 0.68)
-mesh = SubResource("MeshDryBranch")
-
-[node name="OwnerMarker" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.54, 0)
-mesh = SubResource("MeshOwnerMarker")
-material_override = SubResource("MatOwnerMarker")
+[node name="KenneyTreeDetailedWilted" parent="WitheredParts" instance=ExtResource("2_model")]
+position = Vector3(0.07, 0.01, 0)
+rotation_degrees = Vector3(0, 0, -15)
+scale = Vector3(0.72, 0.72, 0.72)

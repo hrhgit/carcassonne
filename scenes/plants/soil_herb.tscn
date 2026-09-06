@@ -1,189 +1,29 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://art/models/plants/soil_herb_quaternius_growing.glb" id="2_growing"]
-[ext_resource type="PackedScene" path="res://art/models/plants/soil_herb_quaternius_withered.glb" id="3_withered"]
+[ext_resource type="PackedScene" path="res://art/models/plants/kenney/plant_flatTall.glb" id="2_model"]
 
-[sub_resource type="StandardMaterial3D" id="MatStem"]
-albedo_color = Color(0.185, 0.31, 0.12, 1)
-roughness = 0.9
-
-[sub_resource type="StandardMaterial3D" id="MatLeaf"]
-albedo_color = Color(0.31, 0.55, 0.16, 1)
-roughness = 0.86
-
-[sub_resource type="StandardMaterial3D" id="MatSeedHead"]
-albedo_color = Color(0.72, 0.60, 0.26, 1)
-roughness = 0.92
-
-[sub_resource type="StandardMaterial3D" id="MatDryStem"]
-albedo_color = Color(0.32, 0.22, 0.10, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="MatDryHead"]
-albedo_color = Color(0.56, 0.43, 0.20, 1)
-roughness = 0.98
-
-[sub_resource type="StandardMaterial3D" id="MatOwnerMarker"]
+[sub_resource type="StandardMaterial3D" id="MatWithered"]
 resource_local_to_scene = true
-albedo_color = Color(0.18, 0.52, 0.86, 1)
-roughness = 0.62
-
-[sub_resource type="CylinderMesh" id="MeshStem"]
-material = SubResource("MatStem")
-top_radius = 0.018
-bottom_radius = 0.032
-height = 0.48
-radial_segments = 5
-rings = 1
-
-[sub_resource type="SphereMesh" id="MeshLeaf"]
-material = SubResource("MatLeaf")
-radius = 0.10
-height = 0.32
-radial_segments = 6
-rings = 3
-
-[sub_resource type="SphereMesh" id="MeshSeedHead"]
-material = SubResource("MatSeedHead")
-radius = 0.060
-height = 0.15
-radial_segments = 6
-rings = 3
-
-[sub_resource type="CylinderMesh" id="MeshDryStem"]
-material = SubResource("MatDryStem")
-top_radius = 0.014
-bottom_radius = 0.026
-height = 0.37
-radial_segments = 5
-rings = 1
-
-[sub_resource type="SphereMesh" id="MeshDryHead"]
-material = SubResource("MatDryHead")
-radius = 0.052
-height = 0.10
-radial_segments = 5
-rings = 2
-
-[sub_resource type="CylinderMesh" id="MeshOwnerMarker"]
-material = SubResource("MatOwnerMarker")
-top_radius = 0.115
-bottom_radius = 0.115
-height = 0.032
-radial_segments = 6
-rings = 1
+albedo_color = Color(0.33, 0.20, 0.075, 1)
+roughness = 1.0
 
 [node name="SoilHerb" type="Node3D"]
 script = ExtResource("1_script")
 species_id = &"soil_herb"
-
-[node name="LegacyGrowingParts" type="Node3D" parent="."]
-visible = false
-
-[node name="StemCenter" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0, 0.24, 0)
-mesh = SubResource("MeshStem")
-
-[node name="StemWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(-0.08, 0.20, 0.015)
-rotation_degrees = Vector3(8, 0, 23)
-scale = Vector3(0.85, 0.86, 0.85)
-mesh = SubResource("MeshStem")
-
-[node name="StemEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0.09, 0.20, -0.02)
-rotation_degrees = Vector3(-11, 10, -26)
-scale = Vector3(0.84, 0.88, 0.84)
-mesh = SubResource("MeshStem")
-
-[node name="StemBack" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0.015, 0.19, -0.09)
-rotation_degrees = Vector3(-24, 4, -7)
-scale = Vector3(0.72, 0.82, 0.72)
-mesh = SubResource("MeshStem")
-
-[node name="LeafWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(-0.115, 0.19, 0.025)
-rotation_degrees = Vector3(8, 0, 65)
-scale = Vector3(0.42, 0.88, 0.38)
-mesh = SubResource("MeshLeaf")
-
-[node name="LeafEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0.115, 0.18, -0.015)
-rotation_degrees = Vector3(-8, 18, -61)
-scale = Vector3(0.42, 0.84, 0.38)
-mesh = SubResource("MeshLeaf")
-
-[node name="LeafFront" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0.005, 0.17, 0.105)
-rotation_degrees = Vector3(64, 9, -4)
-scale = Vector3(0.38, 0.74, 0.42)
-mesh = SubResource("MeshLeaf")
-
-[node name="SeedHeadCenter" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0, 0.51, 0)
-mesh = SubResource("MeshSeedHead")
-
-[node name="SeedHeadWest" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(-0.16, 0.39, 0.015)
-rotation_degrees = Vector3(7, 0, 23)
-scale = Vector3(0.88, 0.88, 0.88)
-mesh = SubResource("MeshSeedHead")
-
-[node name="SeedHeadEast" type="MeshInstance3D" parent="LegacyGrowingParts"]
-position = Vector3(0.17, 0.38, -0.02)
-rotation_degrees = Vector3(-10, 10, -26)
-scale = Vector3(0.84, 0.84, 0.84)
-mesh = SubResource("MeshSeedHead")
-
-[node name="LegacyWitheredParts" type="Node3D" parent="."]
-visible = false
-
-[node name="DryStemCenter" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(-0.025, 0.16, 0)
-rotation_degrees = Vector3(2, 0, 30)
-mesh = SubResource("MeshDryStem")
-
-[node name="DryStemEast" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(0.09, 0.15, -0.03)
-rotation_degrees = Vector3(-18, 13, -34)
-scale = Vector3(0.84, 0.9, 0.84)
-mesh = SubResource("MeshDryStem")
-
-[node name="DryStemWest" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(-0.105, 0.14, 0.03)
-rotation_degrees = Vector3(13, -8, 42)
-scale = Vector3(0.72, 0.80, 0.72)
-mesh = SubResource("MeshDryStem")
-
-[node name="DryHeadCenter" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(0.065, 0.32, 0)
-rotation_degrees = Vector3(4, 0, 42)
-mesh = SubResource("MeshDryHead")
-
-[node name="DryHeadEast" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(0.17, 0.27, -0.03)
-rotation_degrees = Vector3(-22, 14, -42)
-scale = Vector3(0.86, 0.86, 0.86)
-mesh = SubResource("MeshDryHead")
-
-[node name="DryHeadWest" type="MeshInstance3D" parent="LegacyWitheredParts"]
-position = Vector3(-0.20, 0.24, 0.03)
-rotation_degrees = Vector3(15, -9, 50)
-scale = Vector3(0.78, 0.78, 0.78)
-mesh = SubResource("MeshDryHead")
-
-[node name="OwnerMarker" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.016, 0)
-mesh = SubResource("MeshOwnerMarker")
-material_override = SubResource("MatOwnerMarker")
+owner_color_mesh_name = &"plant_flatTall"
+owner_color_surface_index = 0
+withered_material = SubResource("MatWithered")
 
 [node name="GrowingParts" type="Node3D" parent="."]
 
-[node name="QuaterniusGrassClump" parent="GrowingParts" instance=ExtResource("2_growing")]
+[node name="KenneyPlantFlatTall" parent="GrowingParts" instance=ExtResource("2_model")]
+scale = Vector3(2, 2, 2)
 
 [node name="WitheredParts" type="Node3D" parent="."]
 visible = false
 
-[node name="QuaterniusDryGrassClump" parent="WitheredParts" instance=ExtResource("3_withered")]
+[node name="KenneyPlantFlatTallWilted" parent="WitheredParts" instance=ExtResource("2_model")]
+position = Vector3(0.04, 0.02, 0)
+rotation_degrees = Vector3(-10, 0, 58)
+scale = Vector3(1.7, 1.7, 1.7)

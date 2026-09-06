@@ -29,6 +29,14 @@ uniform float foam_cutoff : hint_range(0.0, 1.0, 0.01) = 0.6;
 // The baked perimeter length of the fused water outline, in world units.
 // It makes the UV2.y shoreline coordinate usable as a locally metric axis.
 uniform float foam_shoreline_length : hint_range(1.0, 32.0, 0.01) = 15.41997;
+// These values are applied per *material instance* when a tile joins a water
+// network. They map each frozen local UV2 shoreline into one shared network
+// coordinate without modifying the mesh, its baked d/s data, or the source
+// material resource. `phase_offset` is measured in normalized wave cycles.
+uniform float foam_network_s_offset = 0.0;
+uniform float foam_network_shoreline_length = 0.0;
+uniform float foam_network_phase_offset = 0.0;
+uniform float foam_network_speed_scale = 1.0;
 // Normalized shoreline-coordinate units travelled by a crest per second.
 uniform float foam_speed : hint_range(0.0, 0.85, 0.005) = 0.025;
 uniform float foam_wave_strength : hint_range(0.0, 1.40, 0.02) = 0.5;
@@ -64,8 +72,28 @@ vec2 foam_hash22(vec2 value) {
 }
 
 
-float shoreline_phase(float shoreline_u, float foam_time) {
-	return (shoreline_u - foam_time * foam_speed) * foam_wave_frequency;
+float effective_network_length() {
+	return max(foam_network_shoreline_length, foam_shoreline_length);
+}
+
+
+float network_shoreline_u(float local_shoreline_u) {
+	float local_s = local_shoreline_u * foam_shoreline_length;
+	return fract((local_s + foam_network_s_offset) / effective_network_length());
+}
+
+
+float shoreline_phase_from_network(float network_u, float foam_time) {
+	return (
+		network_u
+		- foam_time * foam_speed * foam_network_speed_scale
+		+ foam_network_phase_offset
+	) * foam_wave_frequency;
+}
+
+
+float shoreline_phase(float local_shoreline_u, float foam_time) {
+	return shoreline_phase_from_network(network_shoreline_u(local_shoreline_u), foam_time);
 }
 
 
@@ -83,9 +111,10 @@ float circular_shore_delta(float sample_u, float source_u) {
 
 
 float shoreline_burst_clusters(vec2 shoreline_coordinate, float foam_time) {
-	float shoreline_length = max(foam_shoreline_length, 0.001);
+	float shoreline_length = max(effective_network_length(), 0.001);
+	float network_u = network_shoreline_u(shoreline_coordinate.x);
 	float source_count = max(4.0, ceil(shoreline_length * foam_scale));
-	float current_cell = floor(shoreline_coordinate.x * source_count);
+	float current_cell = floor(network_u * source_count);
 	float cell_size = shoreline_length / source_count;
 	// The same user-facing wave strength that expands the white edge also
 	// controls how far and how long its descendants can survive as foam.
@@ -114,7 +143,7 @@ float shoreline_burst_clusters(vec2 shoreline_coordinate, float foam_time) {
 		// The birth time is precisely the same p=1/4 crest that makes this piece
 		// of shoreline widest. A source remains visible only while it travels
 		// through the protected shore band.
-		float source_phase = shoreline_phase(source_u, foam_time);
+		float source_phase = shoreline_phase_from_network(source_u, foam_time);
 		float burst_age = fract(source_phase - 0.25 + (foam_hash21(vec2(cell_id, 31.7)) - 0.5) * 0.05);
 		float lifetime_mask = 1.0 - step(mix(0.12, 0.86, wave_response), burst_age);
 		float reach = foam_width * mix(
@@ -138,7 +167,7 @@ float shoreline_burst_clusters(vec2 shoreline_coordinate, float foam_time) {
 			float bubble_u = fract(source_u + cluster_offset.x / shoreline_length);
 			float bubble_distance = max(0.0, burst_distance + cluster_offset.y);
 			vec2 bubble_delta = vec2(
-				circular_shore_delta(shoreline_coordinate.x, bubble_u) * shoreline_length,
+				circular_shore_delta(network_u, bubble_u) * shoreline_length,
 				shoreline_coordinate.y - bubble_distance
 			);
 			float circle = 1.0 - step(radius, length(bubble_delta));

@@ -2,106 +2,52 @@
 
 [ext_resource type="Script" path="res://scripts/tile_artwork_3d.gd" id="1_40liw"]
 [ext_resource type="Resource" path="res://art/topologies/generated/procedural_land_nes.tres" id="2_q0mwd"]
-[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="3_afl6u"]
-[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="4_tg1ts"]
-[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="5_upkn0"]
-[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_nes_land_region_0.tres" id="6_euj4s"]
-[ext_resource type="PackedScene" path="res://scenes/plants/soil_flower.tscn" id="7_yi5ep"]
-[ext_resource type="Script" path="res://scripts/sowable_plant_3d.gd" id="8_effkd"]
-[ext_resource type="PackedScene" path="res://scenes/plants/soil_sapling.tscn" id="9_qx5p3"]
+[ext_resource type="Script" path="res://scripts/planting_mask_3d.gd" id="3_afl6u"]
+[ext_resource type="Resource" path="res://art/planting_masks/generated/procedural_land_nes_land_region_0_01.tres" id="4_tg1ts"]
+[ext_resource type="Resource" path="res://art/planting_masks/generated/procedural_land_nes_land_region_0_02.tres" id="5_upkn0"]
+[ext_resource type="Material" path="res://art/materials/terrain/tile_base.tres" id="6_euj4s"]
+[ext_resource type="Material" path="res://art/materials/terrain/meadow.tres" id="7_yi5ep"]
+[ext_resource type="Material" path="res://art/materials/terrain/fertile_soil.tres" id="8_effkd"]
+[ext_resource type="ArrayMesh" path="res://art/generated/procedural_tiles/procedural_land_nes_land_region_0.tres" id="9_qx5p3"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_noqdl"]
-material = ExtResource("3_afl6u")
+material = ExtResource("6_euj4s")
 size = Vector3(4.9, 0.3, 4.9)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_7il6i"]
-material = ExtResource("4_tg1ts")
+material = ExtResource("7_yi5ep")
 size = Vector2(4.9, 4.9)
 
-[node name="LandNes" type="Node3D" unique_id=1482558344]
+[node name="LandNes" type="Node3D" unique_id=407889309]
 script = ExtResource("1_40liw")
 edge_markers = PackedInt32Array(1, 1, 1, 0)
 topology = ExtResource("2_q0mwd")
 require_topology = true
 require_canonical_topology = true
+planting_masks = Array[ExtResource("3_afl6u")]([ExtResource("4_tg1ts"), ExtResource("5_upkn0")])
 
-[node name="Base" type="MeshInstance3D" parent="." unique_id=1714245873]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=690973457]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 mesh = SubResource("BoxMesh_noqdl")
 
-[node name="Meadow" type="MeshInstance3D" parent="." unique_id=680614498]
+[node name="Meadow" type="MeshInstance3D" parent="." unique_id=1718891693]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
 mesh = SubResource("PlaneMesh_7il6i")
 
-[node name="LandSoil" type="Node3D" parent="." unique_id=2131542808]
+[node name="LandSoil" type="Node3D" parent="." unique_id=331476465]
 
-[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=1057900882]
-material_override = ExtResource("5_upkn0")
-mesh = ExtResource("6_euj4s")
+[node name="Region0" type="MeshInstance3D" parent="LandSoil" unique_id=2128483904]
+material_override = ExtResource("8_effkd")
+mesh = ExtResource("9_qx5p3")
 
-[node name="Water" type="Node3D" parent="." unique_id=382284302]
+[node name="Water" type="Node3D" parent="." unique_id=726425381]
 
-[node name="RiverBed" type="Node3D" parent="Water" unique_id=1480236887]
+[node name="RiverBed" type="Node3D" parent="Water" unique_id=1843715199]
 
-[node name="AnimatedSurface" type="Node3D" parent="Water" unique_id=1586037438]
+[node name="AnimatedSurface" type="Node3D" parent="Water" unique_id=34967206]
 
-[node name="Decorations" type="Node3D" parent="." unique_id=1036283428]
+[node name="Decorations" type="Node3D" parent="." unique_id=907856922]
 
-[node name="GrowingPlants" type="Node3D" parent="." unique_id=1466047725]
+[node name="GrowingPlants" type="Node3D" parent="." unique_id=1262315463]
 
-[node name="Region01Plant01" type="Node3D" parent="GrowingPlants" unique_id=1066549264 instance=ExtResource("7_yi5ep")]
-transform = Transform3D(0.3479697, 0, 1.0452114, 0, 1.1016123, 0, -1.0452114, 0, 0.3479697, 0.5616224, 0.152, 0.9471073)
-script = ExtResource("8_effkd")
-species_id = &"soil_flower"
-
-[node name="Region01Plant02" type="Node3D" parent="GrowingPlants" unique_id=1928065037 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.19009186, 0, 0.9467354, 0, 0.96563077, 0, -0.9467354, 0, -0.19009186, 1.238265, 0.152, -0.59611)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-
-[node name="Region01Plant03" type="Node3D" parent="GrowingPlants" unique_id=636332380 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.7974704, 0, 0.6628003, 0, 1.036949, 0, -0.6628003, 0, -0.7974704, 1.782773, 0.152, 0.8673618)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-
-[node name="Region01Plant04" type="Node3D" parent="GrowingPlants" unique_id=1314160902 instance=ExtResource("7_yi5ep")]
-transform = Transform3D(0.61889017, 0, -0.8179415, 0, 1.0256965, 0, 0.8179415, 0, 0.61889017, 1.8140178, 0.152, 1.6395853)
-script = ExtResource("8_effkd")
-species_id = &"soil_flower"
-
-[node name="Region01Plant05" type="Node3D" parent="GrowingPlants" unique_id=1041842805 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.9268568, 0, 0.62313825, 0, 1.1168549, 0, -0.62313825, 0, -0.9268568, -0.59449995, 0.152, -1.2084134)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-
-[node name="WitheredPlants" type="Node3D" parent="." unique_id=1398624155]
-
-[node name="Region01Plant01" type="Node3D" parent="WitheredPlants" unique_id=1604302403 instance=ExtResource("7_yi5ep")]
-transform = Transform3D(0.3479697, 0, 1.0452114, 0, 1.1016123, 0, -1.0452114, 0, 0.3479697, 0.5616224, 0.152, 0.9471073)
-script = ExtResource("8_effkd")
-species_id = &"soil_flower"
-growth_state = 1
-
-[node name="Region01Plant02" type="Node3D" parent="WitheredPlants" unique_id=1790458867 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.19009186, 0, 0.9467354, 0, 0.96563077, 0, -0.9467354, 0, -0.19009186, 1.238265, 0.152, -0.59611)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-growth_state = 1
-
-[node name="Region01Plant03" type="Node3D" parent="WitheredPlants" unique_id=1791356777 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.7974704, 0, 0.6628003, 0, 1.036949, 0, -0.6628003, 0, -0.7974704, 1.782773, 0.152, 0.8673618)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-growth_state = 1
-
-[node name="Region01Plant04" type="Node3D" parent="WitheredPlants" unique_id=292628116 instance=ExtResource("7_yi5ep")]
-transform = Transform3D(0.61889017, 0, -0.8179415, 0, 1.0256965, 0, 0.8179415, 0, 0.61889017, 1.8140178, 0.152, 1.6395853)
-script = ExtResource("8_effkd")
-species_id = &"soil_flower"
-growth_state = 1
-
-[node name="Region01Plant05" type="Node3D" parent="WitheredPlants" unique_id=525631250 instance=ExtResource("9_qx5p3")]
-transform = Transform3D(-0.9268568, 0, 0.62313825, 0, 1.1168549, 0, -0.62313825, 0, -0.9268568, -0.59449995, 0.152, -1.2084134)
-script = ExtResource("8_effkd")
-species_id = &"soil_sapling"
-growth_state = 1
+[node name="WitheredPlants" type="Node3D" parent="." unique_id=15586533]

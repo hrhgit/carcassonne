@@ -4,6 +4,8 @@ const BOARD_STATE_SCRIPT := preload("res://scripts/board_state.gd")
 const UI_FONT_SCRIPT := preload("res://scripts/ui_font.gd")
 const PLANT_ENGINE_SCRIPT := preload("res://scripts/plant_engine.gd")
 const PLANT_SCRIPT := preload("res://scripts/plant.gd")
+const RUNTIME_PLANT_SCATTER_SCRIPT := preload("res://scripts/runtime_plant_scatter_3d.gd")
+const WATER_NETWORK_RENDERER_SCRIPT := preload("res://scripts/water_network_renderer_3d.gd")
 
 const GAME_SMOKE_ARGUMENT := "--game-smoke"
 const CAPTURE_ARGUMENT := "--capture-game"
@@ -38,6 +40,7 @@ enum MenuMode { NONE, PLANT, EXPAND }
 @onready var board_root: Node3D = $Board
 
 var board_state
+var water_network_renderer: WaterNetworkRenderer3D
 var deck: Array[TileDefinition] = []
 var deck_index := 0
 var current_rotation := 0
@@ -84,6 +87,7 @@ func _ready() -> void:
 	_register_key_action(&"restart_tile_game", KEY_N)
 
 	board_state = BOARD_STATE_SCRIPT.new()
+	water_network_renderer = WATER_NETWORK_RENDERER_SCRIPT.new() as WaterNetworkRenderer3D
 	_build_highlight_quad()
 	_build_hud()
 	_update_camera()
@@ -260,8 +264,16 @@ func _add_placed_tile_visual(cell: Vector2i) -> void:
 	piece.position = _cell_world_position(cell)
 	piece.rotation.y = -float(definition.visual_rotation_quarters + rotation) * PI * 0.5
 	board_root.add_child(piece)
-	piece.call("set_growth_state", 0)  # 裸土
+	if piece is TileArtwork3D:
+		var artwork := piece as TileArtwork3D
+		var plant_seed := RUNTIME_PLANT_SCATTER_SCRIPT.seed_for_tile(definition.visual_seed, cell)
+		artwork.set_runtime_plant_layout(RUNTIME_PLANT_SCATTER_SCRIPT.generate_for_tile(artwork, plant_seed))
+		artwork.set_runtime_plant_states({})
+		artwork.set_growth_state(TileArtwork3D.GrowthState.BARE)
+	else:
+		piece.call("set_growth_state", 0)  # 兼容旧的研究预制件
 	placed_tile_nodes[cell] = piece
+	_refresh_water_network()
 
 
 func _sync_preview() -> void:
@@ -307,6 +319,7 @@ func _refresh_preview_piece() -> void:
 	preview_node.name = "PreviewTile"
 	preview_node.visible = false
 	board_root.add_child(preview_node)
+	preview_node.call("set_growth_state", 0)
 	_sync_preview()
 
 
@@ -345,17 +358,30 @@ func _refresh_tile_growth(cell: Vector2i) -> void:
 	var tile: Node3D = placed_tile_nodes[cell]
 	var plants: Array = board_state.list_plants_in_tile(cell)
 	if plants.is_empty():
+		if tile.has_method("set_runtime_plant_states"):
+			tile.call("set_runtime_plant_states", {})
 		tile.call("set_growth_state", 0)
 		return
-	var any_healthy := false
-	var owner := int(plants[0].owner)
+	var runtime_states: Dictionary = {}
 	for p in plants:
-		if int(p.form) == PLANT_SCRIPT.Form.HEALTHY:
-			any_healthy = true
+		runtime_states[int(p.species)] = {
+			"growth_state": TileArtwork3D.GrowthState.GROWING if int(p.form) == PLANT_SCRIPT.Form.HEALTHY else TileArtwork3D.GrowthState.WITHERED,
+			"owner_color": _player_color(int(p.owner)),
+		}
+	if tile.has_method("has_runtime_plant_layout") and bool(tile.call("has_runtime_plant_layout")):
+		tile.call("set_runtime_plant_states", runtime_states)
+		tile.call("set_growth_state", TileArtwork3D.GrowthState.GROWING)
+		return
+	var any_healthy := plants.any(func(p): return int(p.form) == PLANT_SCRIPT.Form.HEALTHY)
 	tile.call("set_growth_state", 1 if any_healthy else 2)
-	var color := _player_color(owner)
+	var color := _player_color(int(plants[0].owner))
 	for plant_node in tile.find_children("*", "SowablePlant3D", true, false):
 		plant_node.call("set_owner_color", color)
+
+
+func _refresh_water_network() -> void:
+	if water_network_renderer != null:
+		water_network_renderer.refresh(board_state, placed_tile_nodes)
 
 
 # === §7 流程 ===

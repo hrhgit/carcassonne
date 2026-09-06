@@ -1,8 +1,8 @@
 extends SceneTree
 
-# Editor/build-time only. It turns a seeded PlantingMask layout into a fixed
-# scene; no gameplay scene calls this generator or randomly instantiates plant
-# geometry while a player is placing tiles.
+# Editor/build-time audit-study only. It turns a seeded PlantingMask layout
+# into a fixed reference scene; gameplay now uses RuntimePlants with the same
+# deterministic sampler and never calls this builder while placing tiles.
 const MASK_PATH := "res://art/planting_masks/soil_planting_study.tres"
 const HERB_PROFILE_PATH := "res://art/plant_profiles/soil_herb.tres"
 const FLOWER_PROFILE_PATH := "res://art/plant_profiles/soil_flower.tres"

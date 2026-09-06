@@ -18,6 +18,12 @@ const WATER_HEIGHT := 0.175
 const BANK_WIDTH := 0.72
 const WATER_WIDTH := 0.48
 const WATER_SUBDIVISIONS := 3
+# 折线拐角斜接的最大放大倍数（90° 转角实际约为 1.414）。
+const RIBBON_MITER_LIMIT := 3.0
+# 开着 Godot 编辑器批量生成时，后台重导入会在 Windows 上短暂锁住刚写入的
+# .tres/.tscn，失败点会在不同文件间随机漂移。保存统一走带重试的包装。
+const SAVE_RETRY_COUNT := 8
+const SAVE_RETRY_DELAY_MS := 150
 
 # Centre feature kinds. A tile normally has no centre feature; a lake tile
 # carries a still central pond, and a pure-water tile routes every water port
@@ -31,13 +37,12 @@ const LAKE_SEGMENTS := 48
 
 const TILE_ARTWORK_SCRIPT := preload("res://scripts/tile_artwork_3d.gd")
 const TOPOLOGY_SCRIPT := preload("res://scripts/tile_topology_3d.gd")
+const PLANTING_MASK_SCRIPT := preload("res://scripts/planting_mask_3d.gd")
 const BASE_MATERIAL := preload("res://art/materials/terrain/tile_base.tres")
 const MEADOW_MATERIAL := preload("res://art/materials/terrain/meadow.tres")
 const SOIL_MATERIAL := preload("res://art/materials/terrain/fertile_soil.tres")
 const BANK_MATERIAL := preload("res://art/materials/terrain/river_bank.tres")
 const WATER_MATERIAL_TEMPLATE := preload("res://art/materials/water/north_east_land_south_water.tres")
-const SAPLING_SCENE := preload("res://scenes/plants/soil_sapling.tscn")
-const FLOWER_SCENE := preload("res://scenes/plants/soil_flower.tscn")
 
 const EDGE_NAMES := {"NORTH": NORTH, "EAST": EAST, "SOUTH": SOUTH, "WEST": WEST}
 const EDGE_KINDS := {"EMPTY": EMPTY, "LAND": LAND, "WATER": WATER}
@@ -56,14 +61,14 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 	var spec: Dictionary = normalized["spec"]
 	var paths := _paths_for(String(spec["id"]))
 	for directory in [
-		paths["mesh_directory"], paths["topology_directory"], paths["material_directory"], paths["scene_directory"],
+		paths["mesh_directory"], paths["topology_directory"], paths["material_directory"], paths["planting_mask_directory"], paths["scene_directory"],
 	]:
 		var directory_error := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
 		if directory_error != OK:
 			return _failure("Could not create output directory %s: %s" % [directory, error_string(directory_error)])
 
 	var land_mesh_paths: Array[String] = []
-	var land_polygons: Array = []
+	var planting_mask_paths: Array[String] = []
 	for region in spec["regions"]:
 		var polygons := _merged_region_polygons(region["edges"])
 		if polygons.is_empty():
@@ -72,11 +77,21 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 		if land_mesh.get_surface_count() == 0:
 			return _failure("Land region %s produced an empty mesh." % region["id"])
 		var land_path: String = paths["land_prefix"] + String(region["id"]) + ".tres"
-		var land_save_error := ResourceSaver.save(land_mesh, land_path)
+		var land_save_error := _save_resource(land_mesh, land_path)
 		if land_save_error != OK:
 			return _failure("Could not save land mesh: %s" % error_string(land_save_error))
 		land_mesh_paths.append(land_path)
-		land_polygons.append(polygons)
+		for polygon_index in range(polygons.size()):
+			var mask := PLANTING_MASK_SCRIPT.new() as PlantingMask3D
+			mask.id = StringName("%s_%s_%02d" % [spec["id"], region["id"], polygon_index + 1])
+			mask.boundary = polygons[polygon_index]
+			mask.edge_clearance = 0.14
+			mask.surface_height = SOIL_HEIGHT
+			var mask_path: String = "%s%s_%02d.tres" % [paths["planting_mask_prefix"], region["id"], polygon_index + 1]
+			var mask_save_error := _save_resource(mask, mask_path)
+			if mask_save_error != OK:
+				return _failure("Could not save LAND planting mask: %s" % error_string(mask_save_error))
+			planting_mask_paths.append(mask_path)
 
 	var water_paths := _water_paths(spec["regions"], spec["routes"])
 	var bank_outlines: Array
@@ -104,34 +119,40 @@ static func build_from_spec_file(spec_path: String) -> Dictionary:
 			return _failure("Water routes produced an empty river or shoreline field.")
 		bank_path = paths["bank_mesh"]
 		water_path = paths["water_mesh"]
-		var bank_save_error := ResourceSaver.save(bank_mesh, bank_path)
-		var water_save_error := ResourceSaver.save(water_mesh, water_path)
+		var bank_save_error := _save_resource(bank_mesh, bank_path)
+		var water_save_error := _save_resource(water_mesh, water_path)
 		if bank_save_error != OK or water_save_error != OK:
-			return _failure("Could not save generated river meshes.")
+			return _failure("Could not save generated river meshes (bank=%s, water=%s)." % [
+				error_string(bank_save_error), error_string(water_save_error),
+			])
 		var water_material := WATER_MATERIAL_TEMPLATE.duplicate(true) as ShaderMaterial
 		water_material.set_shader_parameter("foam_shoreline_length", shoreline_length)
+		water_material.set_shader_parameter("foam_network_s_offset", 0.0)
+		water_material.set_shader_parameter("foam_network_shoreline_length", 0.0)
+		water_material.set_shader_parameter("foam_network_phase_offset", 0.0)
+		water_material.set_shader_parameter("foam_network_speed_scale", 1.0)
 		water_material_path = paths["water_material"]
-		var material_save_error := ResourceSaver.save(water_material, water_material_path)
+		var material_save_error := _save_resource(water_material, water_material_path)
 		if material_save_error != OK:
 			return _failure("Could not save generated water material: %s" % error_string(material_save_error))
 
 	var topology := _build_topology(spec)
 	var topology_path: String = paths["topology"]
-	var topology_save_error := ResourceSaver.save(topology, topology_path)
+	var topology_save_error := _save_resource(topology, topology_path)
 	if topology_save_error != OK:
 		return _failure("Could not save generated topology: %s" % error_string(topology_save_error))
 	var saved_topology := load(topology_path) as Resource
 	if saved_topology == null:
 		return _failure("Generated topology could not be loaded after saving.")
 
-	var root := _build_scene(spec, saved_topology, land_mesh_paths, bank_path, water_path, water_material_path, land_polygons)
+	var root := _build_scene(spec, saved_topology, land_mesh_paths, bank_path, water_path, water_material_path, planting_mask_paths)
 	var packed := PackedScene.new()
 	var pack_error := packed.pack(root)
 	if pack_error != OK:
 		root.free()
 		return _failure("Could not pack generated 3D tile: %s" % error_string(pack_error))
 	var scene_path: String = paths["scene"]
-	var scene_save_error := ResourceSaver.save(packed, scene_path)
+	var scene_save_error := _save_resource(packed, scene_path)
 	root.free()
 	if scene_save_error != OK:
 		return _failure("Could not save generated 3D tile scene: %s" % error_string(scene_save_error))
@@ -288,7 +309,7 @@ static func _build_scene(
 	bank_path: String,
 	water_path: String,
 	water_material_path: String,
-	land_polygons: Array,
+	planting_mask_paths: Array[String],
 ) -> Node3D:
 	var root := TILE_ARTWORK_SCRIPT.new() as Node3D
 	root.name = _pascal_case(String(spec["id"]))
@@ -297,6 +318,12 @@ static func _build_scene(
 	root.set("require_topology", true)
 	root.set("require_canonical_topology", true)
 	root.set("preview_growth_state", 1)
+	var planting_masks: Array[PlantingMask3D] = []
+	for mask_path in planting_mask_paths:
+		var mask := load(mask_path) as PlantingMask3D
+		if mask != null:
+			planting_masks.append(mask)
+	root.set("planting_masks", planting_masks)
 
 	var base_mesh := BoxMesh.new()
 	base_mesh.size = Vector3(4.9, 0.3, 4.9)
@@ -361,47 +388,7 @@ static func _build_scene(
 	var withered_plants := Node3D.new()
 	withered_plants.name = "WitheredPlants"
 	_add(root, withered_plants, root)
-	_add_baked_plants(growing_plants, withered_plants, land_polygons, int(spec["seed"]), root)
 	return root
-
-
-static func _add_baked_plants(growing_root: Node3D, withered_root: Node3D, regions: Array, seed: int, scene_owner: Node) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
-	var plant_index := 0
-	for region_index in range(regions.size()):
-		var positions := _plant_positions(regions[region_index], rng, 5)
-		for position in positions:
-			var plant_scene: PackedScene = FLOWER_SCENE if plant_index % 3 == 0 else SAPLING_SCENE
-			var yaw := rng.randf_range(0.0, TAU)
-			var size := rng.randf_range(0.82, 1.12)
-			for state_index in range(2):
-				var plant := plant_scene.instantiate() as Node3D
-				plant.name = "Region%02dPlant%02d" % [region_index + 1, plant_index + 1]
-				plant.position = Vector3(position.x, SOIL_HEIGHT, position.y)
-				plant.rotation.y = yaw
-				plant.scale = Vector3.ONE * size
-				plant.set("growth_state", state_index)
-				_add(growing_root if state_index == 0 else withered_root, plant, scene_owner)
-			plant_index += 1
-
-
-static func _plant_positions(polygons: Array, rng: RandomNumberGenerator, desired_count: int) -> PackedVector2Array:
-	var result := PackedVector2Array()
-	var attempts := 0
-	while result.size() < desired_count and attempts < desired_count * 200:
-		attempts += 1
-		var candidate := Vector2(rng.randf_range(-2.15, 2.15), rng.randf_range(-2.15, 2.15))
-		if not _point_in_any_polygon(candidate, polygons):
-			continue
-		var too_close := false
-		for existing in result:
-			if existing.distance_to(candidate) < 0.48:
-				too_close = true
-				break
-		if not too_close:
-			result.append(candidate)
-	return result
 
 
 static func _build_land_mesh(polygons: Array) -> ArrayMesh:
@@ -520,27 +507,91 @@ static func _water_paths(regions: Array, routes: Array) -> Array:
 	var result: Array = []
 	var hub_targets := {}
 	for route in routes:
-		var inlet := _edge_direction(route["from"]) * TILE_HALF_SIZE
+		var from_edge := int(route["from"])
+		var inlet := _edge_direction(from_edge) * TILE_HALF_SIZE
 		var target_index := int(route["to_region"])
 		if route["via_hub"]:
 			result.append(PackedVector2Array([inlet, Vector2.ZERO]))
 			if target_index >= 0:
 				hub_targets[target_index] = true
 		else:
-			var contact := _region_contact(regions[target_index]["edges"])
-			result.append(PackedVector2Array([inlet, contact]))
+			var contact := _region_contact(regions[target_index]["edges"], from_edge)
+			# 地块构成规范 §4.1：拐弯或分叉的水流必须先到中央汇点、再折向目标，
+			# 不得贴边即转弯。单水口同样适用——水陆分居两条垂直边时（如西水北土），
+			# 直接连成一条斜线会让拓扑无法读出，必须拆成"边中心 → 中央 → 土地"折线。
+			result.append(_polyline_through_center(inlet, contact))
 	for region_index in hub_targets:
-		result.append(PackedVector2Array([Vector2.ZERO, _region_contact(regions[region_index]["edges"])]))
+		result.append(PackedVector2Array([Vector2.ZERO, _region_contact(regions[region_index]["edges"], -1)]))
 	return result
 
 
-static func _region_contact(edges: PackedInt32Array) -> Vector2:
+# 把"边中心 → 土地接触点"的直线升级为"边中心 → 中央汇点 → 土地接触点"的折线。
+# 当中央汇点与端点重合、落在线段之外，或三点已经共线时，插入它既不改变形状也
+# 读不出转折，此时退回原直线，避免产生零长度段让 ribbon 切线归一化出现 NaN。
+static func _polyline_through_center(start: Vector2, end: Vector2) -> PackedVector2Array:
+	if _is_degenerate_center_insertion(start, end):
+		return PackedVector2Array([start, end])
+	return PackedVector2Array([start, Vector2.ZERO, end])
+
+
+static func _is_degenerate_center_insertion(start: Vector2, end: Vector2) -> bool:
+	var center := Vector2.ZERO
+	if start.distance_to(center) < 0.05 or end.distance_to(center) < 0.05:
+		return true
+	var segment := end - start
+	var segment_length := segment.length()
+	if segment_length < 0.05:
+		return true
+	var direction := segment / segment_length
+	var projection := (center - start).dot(direction)
+	# 汇点不落在两端点之间时，插入它只会让水道折回去。
+	if projection < 0.05 or projection > segment_length - 0.05:
+		return true
+	# 三点近似共线时，插入汇点不改变折线形状，属于无效转折。
+	return (center - start - direction * projection).length() < 0.05
+
+
+# 水从 from_edge 的边中点沿中心方向进入，返回其与土地区域多边形内缘的
+# 第一个交点。这才是"水路在最先接触土地处结束"的精确几何，而不是方向向量的近似。
+# from_edge < 0 表示水路起点在中心 (0,0)（hub 分叉后流向土地），此时沿
+# 中心到土地形心的方向求交。
+static func _region_contact(edges: PackedInt32Array, from_edge: int) -> Vector2:
 	if edges.size() == 1:
+		# 单边：内缘中心直接取该边方向内缩（与 _edge_soil_outline 一致）。
 		return _edge_direction(edges[0]) * 0.90
-	var direction := Vector2.ZERO
-	for edge in edges:
-		direction += _edge_direction(edge)
-	return Vector2.ZERO if direction.is_zero_approx() else direction.normalized() * 0.65
+	var polygons := _merged_region_polygons(edges)
+	var inlet: Vector2
+	var toward: Vector2
+	if from_edge >= NORTH and from_edge <= WEST:
+		inlet = _edge_direction(from_edge) * TILE_HALF_SIZE
+		toward = -_edge_direction(from_edge)
+	else:
+		inlet = Vector2.ZERO
+		var direction := Vector2.ZERO
+		for edge in edges:
+			direction += _edge_direction(edge)
+		toward = Vector2.ZERO if direction.is_zero_approx() else direction.normalized()
+		if toward.is_zero_approx():
+			return Vector2.ZERO
+	var ray_end := inlet + toward * (TILE_HALF_SIZE * 2.0)
+	var best_distance := INF
+	var best_point := Vector2.ZERO
+	for polygon in polygons:
+		for index in range(polygon.size()):
+			var a: Vector2 = polygon[index]
+			var b: Vector2 = polygon[(index + 1) % polygon.size()]
+			var hit: Variant = Geometry2D.segment_intersects_segment(inlet, ray_end, a, b)
+			if hit != null:
+				var d := (Vector2(hit) - inlet).length()
+				# 跳过射线起点恰落在多边形外缘上的退化交点（距离≈0），
+				# 取真正进入土地内部的内缘交点。
+				if d > 0.01 and d < best_distance:
+					best_distance = d
+					best_point = Vector2(hit)
+	if best_distance < INF:
+		return best_point
+	# 兜底：未命中时退回中心（纯水/异常配置）。
+	return Vector2.ZERO
 
 
 static func _merged_ribbon_outlines(paths: Array, width: float) -> Array:
@@ -551,11 +602,13 @@ static func _merged_ribbon_outlines(paths: Array, width: float) -> Array:
 
 
 static func _ribbon_outline(path: PackedVector2Array, width: float) -> PackedVector2Array:
+	if path.size() < 2 or _open_path_length(path) < 0.001:
+		# 端点重合的退化路径定义不出切线，直接不生成水面。
+		return PackedVector2Array()
 	var left := PackedVector2Array()
 	var right := PackedVector2Array()
 	for index in range(path.size()):
-		var tangent := (path[min(index + 1, path.size() - 1)] - path[max(index - 1, 0)]).normalized()
-		var normal := Vector2(-tangent.y, tangent.x) * width * 0.5
+		var normal := _ribbon_offset(path, index, width)
 		left.append(path[index] + normal)
 		right.append(path[index] - normal)
 	var outline := PackedVector2Array()
@@ -564,6 +617,34 @@ static func _ribbon_outline(path: PackedVector2Array, width: float) -> PackedVec
 	for index in range(right.size() - 1, -1, -1):
 		outline.append(right[index])
 	return outline
+
+
+# 折线拐角用斜接（miter）：内部点的偏移沿两条相邻边法线的角平分线，并按
+# 1/cos(θ/2) 放大。相比中心差分法线，这让 90° 转折处的水道宽度不塌陷，外角
+# 形成清晰尖角，符合规范"水路使用清晰的折线关系"的要求。放大倍数设上限，
+# 防止未来出现极锐折角时拉出过长尖刺。
+static func _ribbon_offset(path: PackedVector2Array, index: int, width: float) -> Vector2:
+	var incoming := path[index] - path[max(index - 1, 0)]
+	var outgoing := path[min(index + 1, path.size() - 1)] - path[index]
+	var tangent := (incoming + outgoing).normalized()
+	if index <= 0 or index >= path.size() - 1:
+		return Vector2(-tangent.y, tangent.x) * width * 0.5
+	var incoming_normal := Vector2(-incoming.normalized().y, incoming.normalized().x)
+	var outgoing_normal := Vector2(-outgoing.normalized().y, outgoing.normalized().x)
+	var bisector := incoming_normal + outgoing_normal
+	if bisector.length_squared() < 0.000001:
+		# 180° 折返让角平分线退化，退回中心差分法线。
+		return Vector2(-tangent.y, tangent.x) * width * 0.5
+	bisector = bisector.normalized()
+	var miter_scale := 1.0 / maxf(bisector.dot(incoming_normal), 0.0001)
+	return bisector * width * 0.5 * minf(miter_scale, RIBBON_MITER_LIMIT)
+
+
+static func _open_path_length(path: PackedVector2Array) -> float:
+	var total := 0.0
+	for index in range(path.size() - 1):
+		total += path[index].distance_to(path[index + 1])
+	return total
 
 
 static func _circle_outline(radius: float, segments: int) -> PackedVector2Array:
@@ -649,8 +730,10 @@ static func _paths_for(id: String) -> Dictionary:
 		"mesh_directory": "res://art/generated/procedural_tiles",
 		"topology_directory": "res://art/topologies/generated",
 		"material_directory": "res://art/materials/water/generated",
+		"planting_mask_directory": "res://art/planting_masks/generated",
 		"scene_directory": "res://scenes/tiles_3d/generated",
 		"land_prefix": "res://art/generated/procedural_tiles/%s_land_" % base,
+		"planting_mask_prefix": "res://art/planting_masks/generated/%s_land_" % base,
 		"bank_mesh": "res://art/generated/procedural_tiles/%s_river_bank.tres" % base,
 		"water_mesh": "res://art/generated/procedural_tiles/%s_water.tres" % base,
 		"topology": "res://art/topologies/generated/%s.tres" % base,
@@ -669,6 +752,19 @@ static func _pascal_case(value: String) -> String:
 	for part in value.split("_", false):
 		result += part.capitalize()
 	return result
+
+
+# 批量生成会连续写入十几个资源；开着编辑器时后台重导入会短暂锁住目标文件，
+# 单次 ResourceSaver.save 可能以 "Can't open" 失败。这里做有限次重试，让锁释放。
+static func _save_resource(resource: Resource, path: String) -> int:
+	var last_error := OK
+	for attempt in range(SAVE_RETRY_COUNT):
+		last_error = ResourceSaver.save(resource, path)
+		if last_error == OK:
+			return OK
+		if attempt < SAVE_RETRY_COUNT - 1:
+			OS.delay_msec(SAVE_RETRY_DELAY_MS)
+	return last_error
 
 
 static func _failure(message: String) -> Dictionary:

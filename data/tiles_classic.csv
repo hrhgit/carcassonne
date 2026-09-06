@@ -25,10 +25,10 @@ city_cap_road_h,城边小路,1,2,1,0,0,2,0,0,0,0,0,0,,1,res://scenes/tiles_3d/ge
 city_cap_road_shield_b,城边路·盾徽,1,3,1,0,0,2,0,0,0,0,0,0,,1,res://scenes/tiles_3d/generated/procedural_land_n_water_w.tscn,0,17,0,经典R3C4：单边城墙+路+盾徽(count3)
 city_full_shield_a,全城·盾徽,1,1,1,1,1,1,0,0,0,0,0,0,,15,res://scenes/tiles_3d/generated/procedural_land_four.tscn,0,18,0,经典R3C5：四边全城+盾徽(count1)
 city_opp_road_a,对城·路,1,3,1,0,2,1,0,0,0,0,0,0,4,9,res://scenes/tiles_3d/generated/procedural_land_nw_water_s.tscn,0,19,0,经典R3C6：相对城边+横穿路(count3)
+split_lands_ns,隔断田地,1,2,1,0,1,0,0,0,0,0,0,0,,1;4,res://scenes/tiles_3d/generated/procedural_land_ns.tscn,0,501,0,相对双边(北+南)各自独立成土地块：中心留空草地，验证 CENTER_SPLIT 链路
 city_full_shield_b,全城·盾徽,1,2,1,1,1,1,0,0,0,0,0,0,,15,res://scenes/tiles_3d/generated/procedural_land_four.tscn,0,20,0,经典R4C1：四边全城+盾徽(count2)
 city_full_shield_c,全城·盾徽,1,1,1,1,1,1,0,0,0,0,0,0,,15,res://scenes/tiles_3d/generated/procedural_land_four.tscn,0,21,0,经典R4C2：四边全城+盾徽(count1)
 road_straight_a,笔直大道,1,8,2,0,2,0,0,0,0,0,0,0,5,,res://scenes/tiles_3d/generated/procedural_water_ns.tscn,0,22,0,经典R4C3：贯穿直路(count8)
 road_curve_a,曲折小径,1,9,2,2,0,0,0,0,0,0,0,0,3,,res://scenes/tiles_3d/generated/procedural_water_ne.tscn,0,23,0,经典R4C4：转弯路(count9)
 road_cross_building_a,路口村舍,1,4,2,2,2,0,0,0,0,0,0,0,7,,res://scenes/tiles_3d/generated/procedural_water_nes.tscn,0,24,0,经典R4C5：三岔路+村舍(count4)
 road_cross4_a,十字路口,1,1,2,2,2,2,0,0,0,0,0,0,15,,res://scenes/tiles_3d/generated/procedural_water_nesw.tscn,0,25,0,经典R4C6：四向十字路(count1)
-

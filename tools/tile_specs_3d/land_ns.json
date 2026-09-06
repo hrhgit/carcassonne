@@ -1,0 +1,27 @@
+{
+	"center": "none",
+	"display_name": "程序化：land_ns",
+	"edges": [
+		"LAND",
+		"EMPTY",
+		"LAND",
+		"EMPTY"
+	],
+	"id": "land_ns",
+	"land_regions": [
+		{
+			"edges": [
+				"NORTH"
+			],
+			"id": "region_0"
+		},
+		{
+			"edges": [
+				"SOUTH"
+			],
+			"id": "region_1"
+		}
+	],
+	"seed": 20261915,
+	"water_routes": []
+}
